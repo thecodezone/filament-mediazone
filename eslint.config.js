@@ -13,7 +13,7 @@ export default [
     eslint.configs.recommended,
     {
         rules: {
-            'no-unused-vars': 'warn',
+            'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
             'no-undef': 'off',
             'no-useless-escape': 'off',
         },
