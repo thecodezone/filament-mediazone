@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 <p align="center">
   <a href="https://codezone.io/">
     <img alt="CodeZone" src="Writerside/images/cz-lines-orange-dark.svg" height="100">

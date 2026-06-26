@@ -1,5 +1,7 @@
 # Filament MediaZone
 
+![Banner](banner.png)
+
 A full-featured media manager for [Laravel Filament](https://filamentphp.com/). Upload, browse, crop, and serve images and files from any Laravel disk — all within your Filament admin panel.
 
 ![MediaZone](cz-lines-orange-dark.svg){ width=100 }
