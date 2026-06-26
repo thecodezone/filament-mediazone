@@ -5,6 +5,8 @@
 
     <variables>
         <header-logo>cz-lines-orange-dark.svg</header-logo>
+        <product-web-url>https://github.com/thecodezone/filament-mediazone</product-web-url>
+        <contribute-url>https://github.com/thecodezone/filament-mediazone</contribute-url>
     </variables>
     <build-profile instance="hi">
         <variables>
