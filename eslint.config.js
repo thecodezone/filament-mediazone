@@ -7,6 +7,7 @@ export default [
         ignores: [
             '**/node_modules/*',
             '**/vendor/*',
+            'resources/js/cropper.min.js',
         ]
     },
     eslint.configs.recommended,

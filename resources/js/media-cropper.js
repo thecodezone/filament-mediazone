@@ -64,7 +64,7 @@ document.addEventListener('alpine:init', function () {
                     cropstart: function () { self._userHasInteracted = true; },
                     cropend: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
                     crop: function () { self._cropBoxData = self.cropper.getCropBoxData(); },
-                    zoom: function (e) {
+                    zoom: function (_e) {
                         self._userHasInteracted = true;
                         // After Cropper recalculates boundaries on zoom, it clamps canvas.top >= 0
                         // when the canvas is smaller than the container (known Cropper.js bug).
