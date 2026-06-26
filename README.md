@@ -1,11 +1,5 @@
 ![Banner](banner.png)
 
-<p align="center">
-  <a href="https://codezone.io/">
-    <img alt="CodeZone" src="Writerside/images/cz-lines-orange-dark.svg" height="100">
-  </a>
-</p>
-
 # Filament MediaZone
 
 A full-featured media manager for [Laravel Filament](https://filamentphp.com/). Upload, browse, crop, and serve images and files from any Laravel filesystem disk — all within your Filament admin panel. Made with care by [CodeZone](https://codezone.io).
