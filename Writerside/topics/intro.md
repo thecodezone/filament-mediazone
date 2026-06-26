@@ -1,4 +1,4 @@
-# Filament MediaZone
+# MediaZone
 
 ![Banner](banner.png)
 
