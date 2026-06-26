@@ -6,6 +6,8 @@ A full-featured media manager for [Laravel Filament](https://filamentphp.com/). 
 
 by [CodeZone](https://codezone.io)
 
+![Media library](screenshot-1.png)
+
 ## Features
 
 - **Media library**: Grid and list browsing with search, folder, and type filters.

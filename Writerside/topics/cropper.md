@@ -2,6 +2,8 @@
 
 The cropper is an interactive image editing panel powered by [Cropper.js](https://fengyuanchen.github.io/cropperjs/). It opens as a Filament slide-over when editing a media item.
 
+![Cropper interface](screenshot-3.png)
+
 ## What it does
 
 - Define a named crop area on an image (position, size, rotation)
@@ -55,6 +57,12 @@ The cropper is an interactive image editing panel powered by [Cropper.js](https:
 | `Space` | Pan mode |
 | `⌘Z` | Undo last crop change |
 | `Esc` | Cancel / close |
+
+## Saved crops
+
+After saving, crops appear on the media edit page with their key, dimensions, and assigned breakpoints.
+
+![Saved crops](screenshot-4.png)
 
 ## Saving
 

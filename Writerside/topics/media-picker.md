@@ -2,6 +2,8 @@
 
 `MediaPicker` is a Filament form component for attaching one or more media items to a model.
 
+![MediaPicker field](screenshot-5.png)
+
 ## Basic usage
 
 ```php
@@ -58,6 +60,8 @@ When using a `BelongsToMany` relationship with extra pivot data, declare the col
 ```
 
 These columns are passed through to `sync()` when media is attached. See [Pivot Columns](pivot-columns.md).
+
+![MediaPicker list view with mixed media](screenshot-7.png)
 
 ## Edit link
 

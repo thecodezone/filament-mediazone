@@ -6,9 +6,19 @@ The media listing is the main browse interface, available at the `Media` resourc
 
 Displays media items as thumbnail cards. Clicking a card navigates to the edit page for that item. Hovering reveals action buttons for viewing the original file, editing, and deleting.
 
+![Grid view](screenshot-1.png)
+
 ## List view
 
 Displays media as a table with columns for thumbnail, name, type, size, dimensions, and folder. Clicking a row navigates to the edit page. The actions column contains edit and delete buttons.
+
+![List view](screenshot-2.png)
+
+## Item actions
+
+Each item has a context menu with actions: View, Add Crop, Edit, Download, and Remove.
+
+![Item context menu](screenshot-6.png)
 
 ## Filters and search
 
