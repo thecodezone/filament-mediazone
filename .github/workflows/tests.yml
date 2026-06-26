@@ -59,7 +59,7 @@ jobs:
           coverage: none
 
       - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --ignore-platform-reqs
 
       - name: Run Pint
         run: vendor/bin/pint --test
