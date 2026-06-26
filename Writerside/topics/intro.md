@@ -39,3 +39,7 @@ See [Installation](installation.md) for setup instructions.
 <img src="screenshot-4.png" alt="Saved crops" thumbnail="true"/>
 <img src="screenshot-5.png" alt="MediaPicker field" thumbnail="true"/>
 <img src="screenshot-7.png" alt="MediaPicker list" thumbnail="true"/>
+
+<tip>
+Filament MediaZone is open source. <a href="https://github.com/thecodezone/filament-mediazone">View the repository on GitHub</a> to report issues, contribute, or browse the source.
+</tip>

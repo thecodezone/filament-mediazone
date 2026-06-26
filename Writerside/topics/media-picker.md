@@ -72,3 +72,7 @@ When a media item is selected, the picker shows an edit button that links to the
         <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
     </category>
 </seealso>
+
+<tip>
+Filament MediaZone is open source. <a href="https://github.com/thecodezone/filament-mediazone">View the repository on GitHub</a> to report issues, contribute, or browse the source.
+</tip>
