@@ -52,3 +52,9 @@ See [Plugin](plugin.md) for plugin configuration options.
 <note>
 If you are using a custom Media model, set <code>config('media.model')</code> before running migrations so the table name resolves correctly.
 </note>
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

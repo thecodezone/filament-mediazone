@@ -49,3 +49,9 @@ Both expose `getEditUrl(int $id): ?string`. If the resource URL cannot be resolv
 ## Deleting media
 
 The delete button fires a `wire:confirm` prompt before calling `deleteMedia($id)`, which hard-deletes the record and dispatches a `media-deleted` event. The observer handles cleaning up the file from disk.
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

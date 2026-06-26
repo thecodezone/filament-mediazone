@@ -53,3 +53,9 @@ If you have registered the `MediaResource` under a tenanted panel, the resource'
 <warning>
 Do not use Laravel's <code>route()</code> helper to build media edit URLs manually. It does not know about the current Filament tenant and will throw a missing-parameter error. Always use <code>$resource::getUrl()</code>.
 </warning>
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

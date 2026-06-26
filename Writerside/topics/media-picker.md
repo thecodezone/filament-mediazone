@@ -66,3 +66,9 @@ These columns are passed through to `sync()` when media is attached. See [Pivot 
 ## Edit link
 
 When a media item is selected, the picker shows an edit button that links to the `MediaResource` edit page. This uses `$resource::getUrl('edit', ['record' => $id])` and works correctly in multi-tenant Filament panels.
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

@@ -76,3 +76,9 @@ See [Pivot Columns](pivot-columns.md) for the full pattern.
 ## URL generation
 
 `generateUrl()` is called automatically by `MediaObserver` on save. It constructs the public URL from the disk, path, and configured Glide route. For cloud disks listed in `config('media.cloud_disks')`, the original storage URL is used directly — Glide is bypassed.
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

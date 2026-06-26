@@ -49,3 +49,9 @@ Add the class to `config/media.php`:
 <tip>
 Presets and locations work well together. A location can reference a preset to auto-configure the cropper when that location is selected. See <a href="crop-locations.md">Crop Locations</a>.
 </tip>
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

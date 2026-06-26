@@ -109,3 +109,9 @@ See [Pivot Columns](pivot-columns.md).
 ```php
 'multi_select_key' => 'metaKey', // 'metaKey' (⌘) or 'ctrlKey'
 ```
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

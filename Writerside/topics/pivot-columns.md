@@ -59,3 +59,9 @@ public function media()
 <tip>
 The base <code>pivotMediaArray()</code> returns an empty array, so if you don't override it nothing breaks — pivot columns are simply absent from the serialised data.
 </tip>
+
+<seealso>
+    <category ref="support">
+        <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">Support Filament MediaZone development</a>
+    </category>
+</seealso>

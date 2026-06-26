@@ -6,6 +6,10 @@ A full-featured media manager for [Laravel Filament](https://filamentphp.com/). 
 
 by [CodeZone](https://codezone.io)
 
+<tip>
+Filament MediaZone is free and open source. If it saves you time, please consider <a href="https://www.paypal.com/donate/?hosted_button_id=T2TCWZXD7J97E">supporting development</a> — it helps us keep building great tools for the Laravel community.
+</tip>
+
 ![Media library](screenshot-1.png)
 
 ![List view](screenshot-2.png){ thumbnail="true" }
