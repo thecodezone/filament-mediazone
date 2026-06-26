@@ -12,13 +12,6 @@ Filament MediaZone is free and open source. If it saves you time, please conside
 
 ![Media library](screenshot-1.png)
 
-![List view](screenshot-2.png){ thumbnail="true" }
-![Cropper](screenshot-3.png){ thumbnail="true" }
-![Saved crops](screenshot-4.png){ thumbnail="true" }
-![MediaPicker field](screenshot-5.png){ thumbnail="true" }
-![Item actions](screenshot-6.png){ thumbnail="true" }
-![MediaPicker list](screenshot-7.png){ thumbnail="true" }
-
 ## Features
 
 - **Media library**: Grid and list browsing with search, folder, and type filters.
@@ -38,3 +31,12 @@ Filament MediaZone is free and open source. If it saves you time, please conside
 ## Installation
 
 See [Installation](installation.md) for setup instructions.
+
+## Screenshots
+
+<img src="screenshot-2.png" alt="List view" thumbnail="true"/>
+<img src="screenshot-3.png" alt="Cropper" thumbnail="true"/>
+<img src="screenshot-4.png" alt="Saved crops" thumbnail="true"/>
+<img src="screenshot-5.png" alt="MediaPicker field" thumbnail="true"/>
+<img src="screenshot-6.png" alt="Item actions" thumbnail="true"/>
+<img src="screenshot-7.png" alt="MediaPicker list" thumbnail="true"/>
