@@ -6,7 +6,13 @@ A full-featured media manager for [Laravel Filament](https://filamentphp.com/). 
 
 by [CodeZone](https://codezone.io)
 
-![Media library](screenshot-1.png)
+![Media library](screenshot-1.png){ thumbnail="true" }
+![List view](screenshot-2.png){ thumbnail="true" }
+![Cropper](screenshot-3.png){ thumbnail="true" }
+![Saved crops](screenshot-4.png){ thumbnail="true" }
+![MediaPicker field](screenshot-5.png){ thumbnail="true" }
+![Item actions](screenshot-6.png){ thumbnail="true" }
+![MediaPicker list](screenshot-7.png){ thumbnail="true" }
 
 ## Features
 
