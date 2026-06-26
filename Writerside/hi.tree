@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="hi"
+                 name="Filament MediaZone"
+                 start-page="intro.md">
+
+    <toc-element topic="intro.md"/>
+    <toc-element topic="installation.md"/>
+    <toc-element topic="configuration.md"/>
+    <toc-element topic="media-model.md"/>
+    <toc-element topic="media-picker.md"/>
+    <toc-element topic="media-listing.md"/>
+    <toc-element topic="cropper.md">
+        <toc-element topic="crop-presets.md"/>
+        <toc-element topic="crop-locations.md"/>
+    </toc-element>
+    <toc-element topic="glide.md"/>
+    <toc-element topic="plugin.md"/>
+    <toc-element topic="advanced.md">
+        <toc-element topic="custom-model.md"/>
+        <toc-element topic="pivot-columns.md"/>
+        <toc-element topic="tenant-aware.md"/>
+    </toc-element>
+
+</instance-profile>

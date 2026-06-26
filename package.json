@@ -1,0 +1,24 @@
+{
+    "name": "@codezone/filament-mediazone",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "stylelint": "stylelint \"resources/css/**/*.css\"",
+        "stylelint:fix": "stylelint \"resources/css/**/*.css\" --fix",
+        "eslint": "eslint \"resources/js/**/*.js\"",
+        "eslint:fix": "eslint \"resources/js/**/*.js\" --fix",
+        "pint": "ddev exec -d /var/www/html/packages/codezone/filament-mediazone /var/www/html/vendor/bin/pint --test",
+        "pint:fix": "ddev exec -d /var/www/html/packages/codezone/filament-mediazone /var/www/html/vendor/bin/pint",
+        "lint": "npm run pint; npm run eslint; npm run stylelint",
+        "fix": "npm run pint:fix; npm run eslint:fix; npm run stylelint:fix"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.0.0",
+        "eslint": "^9.0.0",
+        "eslint-config-prettier": "^10.0.0",
+        "globals": "^16.0.0",
+        "stylelint": "^16.0.0",
+        "stylelint-config-standard": "^38.0.0",
+        "stylelint-selector-bem-pattern": "^4.0.0"
+    }
+}
