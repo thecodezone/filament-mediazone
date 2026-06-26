@@ -18,8 +18,6 @@ Displays media as a table with columns for thumbnail, name, type, size, dimensio
 
 Each item has a context menu with actions: View, Add Crop, Edit, Download, and Remove.
 
-![Item context menu](screenshot-6.png)
-
 ## Filters and search
 
 | Control | Behaviour |

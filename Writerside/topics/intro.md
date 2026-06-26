@@ -38,5 +38,4 @@ See [Installation](installation.md) for setup instructions.
 <img src="screenshot-3.png" alt="Cropper" thumbnail="true"/>
 <img src="screenshot-4.png" alt="Saved crops" thumbnail="true"/>
 <img src="screenshot-5.png" alt="MediaPicker field" thumbnail="true"/>
-<img src="screenshot-6.png" alt="Item actions" thumbnail="true"/>
 <img src="screenshot-7.png" alt="MediaPicker list" thumbnail="true"/>
