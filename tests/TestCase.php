@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Tests;
 
 use Codezone\MediaZone\MediaZoneServiceProvider;
+use Codezone\MediaZone\Models\Media;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
@@ -30,7 +31,7 @@ abstract class TestCase extends OrchestraTestCase
             'database' => ':memory:',
             'prefix' => '',
         ]);
-        $app['config']->set('media.model', \Codezone\MediaZone\Models\Media::class);
+        $app['config']->set('media.model', Media::class);
         $app['config']->set('media.disk', 'media');
         $app['config']->set('filesystems.disks.media', [
             'driver' => 'local',

@@ -7,10 +7,11 @@ namespace Codezone\MediaZone\Services;
 use Illuminate\Support\Facades\Storage;
 use League\Glide\Responses\SymfonyResponseFactory;
 use League\Glide\Server;
+use League\Glide\ServerFactory;
 
 class GlideServerFactory
 {
-    public function getFactory(): \League\Glide\ServerFactory|Server
+    public function getFactory(): ServerFactory|Server
     {
         $filesystem = Storage::disk(config('media.disk'));
         $defaults = ['bg' => 'ffffff'];
@@ -19,7 +20,7 @@ class GlideServerFactory
         $cloudDisks = config('media.cloud_disks', []);
 
         if (in_array(config('media.disk'), $cloudDisks, true)) {
-            return \League\Glide\ServerFactory::create([
+            return ServerFactory::create([
                 'driver' => $driver,
                 'response' => new SymfonyResponseFactory(app('request')),
                 'source' => $filesystem->getDriver(),
@@ -31,7 +32,7 @@ class GlideServerFactory
             ]);
         }
 
-        return \League\Glide\ServerFactory::create([
+        return ServerFactory::create([
             'driver' => $driver,
             'response' => new SymfonyResponseFactory(app('request')),
             'source' => storage_path('app'),

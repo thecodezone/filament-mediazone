@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Livewire;
 
 use Codezone\MediaZone\Livewire\Concerns\HasMediaFilters;
+use Codezone\MediaZone\Models\Media;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -118,7 +120,7 @@ class MediaPickerPanel extends Component
 
     protected function getMediaModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     public function getFilesProperty(): array
@@ -224,7 +226,7 @@ class MediaPickerPanel extends Component
 
         $media = [];
         foreach ($this->selected as $item) {
-            $uuid = (string) ($item['id'] ?? \Illuminate\Support\Str::uuid());
+            $uuid = (string) ($item['id'] ?? Str::uuid());
             $media[$uuid] = $item;
         }
 

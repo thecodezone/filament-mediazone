@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Codezone\MediaZone\Livewire;
 
+use Codezone\MediaZone\Filament\Resources\MediaResource;
 use Codezone\MediaZone\Livewire\Concerns\HasMediaFilters;
+use Codezone\MediaZone\Models\Media;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -29,7 +31,7 @@ class MediaListing extends Component
 
     protected function getMediaModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     public function setDisplayMode(string $mode): void
@@ -89,7 +91,7 @@ class MediaListing extends Component
 
     public function getEditUrl(int $id): ?string
     {
-        $resource = config('media.resources.resource', \Codezone\MediaZone\Filament\Resources\MediaResource::class);
+        $resource = config('media.resources.resource', MediaResource::class);
 
         try {
             return $resource::getUrl('edit', ['record' => $id]);

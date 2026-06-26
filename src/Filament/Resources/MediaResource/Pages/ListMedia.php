@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Filament\Resources\MediaResource\Pages;
 
 use Codezone\MediaZone\Filament\Resources\MediaResource;
+use Codezone\MediaZone\Models\Media;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -86,7 +87,7 @@ class ListMedia extends ListRecords
 
     public function getEditUrl(int $id): ?string
     {
-        $resource = config('media.resources.resource', \Codezone\MediaZone\Filament\Resources\MediaResource::class);
+        $resource = config('media.resources.resource', MediaResource::class);
 
         try {
             return $resource::getUrl('edit', ['record' => $id]);
@@ -97,7 +98,7 @@ class ListMedia extends ListRecords
 
     protected function getMediaModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     public function deleteMedia(int $id): void

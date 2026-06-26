@@ -7,13 +7,18 @@ namespace Codezone\MediaZone\Filament\Resources;
 use Codezone\MediaZone\Filament\Resources\MediaResource\Pages;
 use Codezone\MediaZone\Media\CropPreset;
 use Codezone\MediaZone\Media\MediaLocation;
+use Codezone\MediaZone\Models\Media;
 use Filament\Actions\StaticAction;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\ActionSize;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
+use Livewire\Component;
 
 class MediaResource extends Resource
 {
@@ -21,7 +26,7 @@ class MediaResource extends Resource
 
     public static function getModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     public static function getNavigationGroup(): ?string
@@ -125,7 +130,7 @@ class MediaResource extends Resource
                         ->icon('heroicon-s-plus-circle')
                         ->iconButton()
                         ->color('warning')
-                        ->size(\Filament\Support\Enums\ActionSize::ExtraLarge)
+                        ->size(ActionSize::ExtraLarge)
                         ->tooltip('New Crop')
                         ->visible(fn ($record) => $record?->isCroppableImage())
                         ->modalContent(fn ($record) => $record ? view('mediazone::media.actions.crop-action', static::cropActionViewData($record)) : null)
@@ -150,7 +155,7 @@ class MediaResource extends Resource
                         ->label('')
                         ->content(function ($record) {
                             if (! $record || empty($record->crops)) {
-                                return new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-400">No crops yet.</p>');
+                                return new HtmlString('<p class="text-sm text-gray-400">No crops yet.</p>');
                             }
 
                             return view('mediazone::media.partials.crops-list', ['crops' => $record->crops]);
@@ -201,7 +206,7 @@ class MediaResource extends Resource
 
                                     return $fields;
                                 })
-                                ->action(function (array $arguments, array $data, \Livewire\Component $livewire): void {
+                                ->action(function (array $arguments, array $data, Component $livewire): void {
                                     $cropId = $arguments['id'] ?? null;
                                     if ($cropId) {
                                         $livewire->updateCrop($cropId, $data);
@@ -332,7 +337,7 @@ class MediaResource extends Resource
             ]);
     }
 
-    public static function canView(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canView(Model $record): bool
     {
         return static::can('update', $record);
     }

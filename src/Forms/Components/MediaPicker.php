@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Codezone\MediaZone\Forms\Components;
 
+use Codezone\MediaZone\Filament\Resources\MediaResource;
 use Codezone\MediaZone\Media\CropPreset;
+use Codezone\MediaZone\Models\Media;
 use Filament\Actions\StaticAction;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Field;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Schema;
 
 class MediaPicker extends Field
 {
@@ -179,16 +185,16 @@ class MediaPicker extends Field
             $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
             if ($record && $this->relationshipName) {
                 $relation = $record->{$this->relationshipName}();
-                if ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsToMany) {
+                if ($relation instanceof BelongsToMany) {
                     return true;
                 }
                 $cropKeyCol = $this->getCropKeyColumnForRecord($record);
-                if (! $cropKeyCol || ! \Illuminate\Support\Facades\Schema::hasColumn($record->getTable(), $cropKeyCol)) {
+                if (! $cropKeyCol || ! Schema::hasColumn($record->getTable(), $cropKeyCol)) {
                     return false;
                 }
             } elseif ($record && ! $this->relationshipName) {
                 $cropKeyCol = $this->getCropKeyColumnForRecord($record);
-                if (! $cropKeyCol || ! \Illuminate\Support\Facades\Schema::hasColumn($record->getTable(), $cropKeyCol)) {
+                if (! $cropKeyCol || ! Schema::hasColumn($record->getTable(), $cropKeyCol)) {
                     return false;
                 }
             }
@@ -202,7 +208,7 @@ class MediaPicker extends Field
     {
         if ($this->relationshipName) {
             $relation = $record->{$this->relationshipName}();
-            if (! ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo)) {
+            if (! ($relation instanceof BelongsTo)) {
                 return null;
             }
             $base = preg_replace('/_id$/', '', $relation->getForeignKeyName());
@@ -322,7 +328,7 @@ class MediaPicker extends Field
 
     protected function getMediaModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     protected function setUp(): void
@@ -340,12 +346,12 @@ class MediaPicker extends Field
                     $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
                     if ($record) {
                         $relation = $record->{$component->getRelationshipName()}();
-                        if ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo) {
+                        if ($relation instanceof BelongsTo) {
                             $items = array_values(is_array($state) ? $state : []);
                             $mediaId = $items[0]['id'] ?? null;
 
                             $cropKeyCol = $component->getCropKeyColumnForRecord($record);
-                            if ($cropKeyCol && \Illuminate\Support\Facades\Schema::hasColumn($record->getTable(), $cropKeyCol)) {
+                            if ($cropKeyCol && Schema::hasColumn($record->getTable(), $cropKeyCol)) {
                                 $record->{$cropKeyCol} = $items[0]['crop_key'] ?? null;
                                 $record->saveQuietly();
                             }
@@ -458,7 +464,7 @@ class MediaPicker extends Field
                     if (! isset($arguments['id'])) {
                         return null;
                     }
-                    $resource = config('media.resources.resource', \Codezone\MediaZone\Filament\Resources\MediaResource::class);
+                    $resource = config('media.resources.resource', MediaResource::class);
 
                     try {
                         return $resource::getUrl('edit', ['record' => $arguments['id']]);
@@ -498,7 +504,7 @@ class MediaPicker extends Field
                 ->label('Add Crop')
                 ->icon('heroicon-s-scissors')
                 ->color('gray')
-                ->modalContent(function (array $arguments, MediaPicker $component): \Illuminate\Contracts\View\View {
+                ->modalContent(function (array $arguments, MediaPicker $component): View {
                     $model = $component->getMediaModel();
                     $id = $arguments['id'] ?? null;
                     $media = $id ? $model::find($id) : null;
@@ -589,7 +595,7 @@ class MediaPicker extends Field
                 ->label('Select Crop')
                 ->icon('heroicon-s-scissors')
                 ->color('gray')
-                ->modalContent(function (array $arguments, MediaPicker $component): \Illuminate\Contracts\View\View {
+                ->modalContent(function (array $arguments, MediaPicker $component): View {
                     $model = $component->getMediaModel();
                     $id = $arguments['id'] ?? null;
                     $uuid = $arguments['uuid'] ?? null;
@@ -778,7 +784,7 @@ class MediaPicker extends Field
     protected function loadRelationshipState(Model $record): void
     {
         $relation = $record->{$this->relationshipName}();
-        $isBelongsTo = $relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo;
+        $isBelongsTo = $relation instanceof BelongsTo;
 
         $related = $relation->get();
 
@@ -791,7 +797,7 @@ class MediaPicker extends Field
         $belongsToCropKey = null;
         if ($isBelongsTo) {
             $cropKeyCol = $this->getCropKeyColumnForRecord($record);
-            if ($cropKeyCol && \Illuminate\Support\Facades\Schema::hasColumn($record->getTable(), $cropKeyCol)) {
+            if ($cropKeyCol && Schema::hasColumn($record->getTable(), $cropKeyCol)) {
                 $belongsToCropKey = $record->{$cropKeyCol};
             }
         }
@@ -860,7 +866,7 @@ class MediaPicker extends Field
         $relation = $record->{$this->relationshipName}();
         $items = array_values($this->getState() ?? []);
 
-        if ($relation instanceof \Illuminate\Database\Eloquent\Relations\BelongsTo) {
+        if ($relation instanceof BelongsTo) {
             $id = $items[0]['id'] ?? null;
             if ($id) {
                 $relation->associate($id);

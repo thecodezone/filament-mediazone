@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Services;
 
 use Illuminate\Support\Facades\Storage;
+use PHPExiftool\Reader;
 
 class ImageMetadata
 {
@@ -27,14 +28,14 @@ class ImageMetadata
      */
     public function all(string $path): array
     {
-        if (! class_exists(\PHPExiftool\Reader::class)) {
+        if (! class_exists(Reader::class)) {
             return [];
         }
 
         $localPath = $this->getLocalPath($path);
 
         try {
-            $reader = \PHPExiftool\Reader::create();
+            $reader = Reader::create();
 
             return $reader->files($localPath)->first()->getData();
         } finally {

@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+use Codezone\MediaZone\Filament\Resources\MediaResource;
+use Codezone\MediaZone\Models\Media;
+use Codezone\MediaZone\Services\GlideServerFactory;
 
 return [
     'accepted_file_types' => [
@@ -44,7 +47,7 @@ return [
     'disk' => env('MEDIA_FILESYSTEM_DISK', 'media'),
 
     'glide' => [
-        'server' => \Codezone\MediaZone\Services\GlideServerFactory::class,
+        'server' => GlideServerFactory::class,
         'driver' => env('MEDIA_GLIDE_DRIVER', 'imagick'), // 'imagick' or 'gd'
         'fallbacks' => [],
         'route_path' => env('MEDIA_GLIDE_ROUTE', 'media'),
@@ -61,7 +64,7 @@ return [
 
     'max_size' => 102400,
 
-    'model' => \Codezone\MediaZone\Models\Media::class,
+    'model' => Media::class,
 
     'min_size' => 0,
 
@@ -76,7 +79,7 @@ return [
         'navigation_icon' => 'heroicon-o-photo',
         'navigation_sort' => 3,
         'navigation_count_badge' => false,
-        'resource' => \Codezone\MediaZone\Filament\Resources\MediaResource::class,
+        'resource' => MediaResource::class,
     ],
 
     'should_preserve_filenames' => true,

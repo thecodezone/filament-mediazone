@@ -10,7 +10,7 @@ use Codezone\MediaZone\Tests\TestCase;
 
 class MediaListingTest extends TestCase
 {
-    public function test_get_edit_url_returns_null_when_resource_getUrl_throws(): void
+    public function test_get_edit_url_returns_null_when_resource_get_url_throws(): void
     {
         // No Filament panel registered, so getUrl() will throw — getEditUrl() must return null
         $component = new MediaListing;
@@ -50,7 +50,7 @@ class MediaListingTest extends TestCase
 
     // ListMedia (Filament page) uses the same blade partial and needs the same method
 
-    public function test_list_media_get_edit_url_returns_null_when_resource_getUrl_throws(): void
+    public function test_list_media_get_edit_url_returns_null_when_resource_get_url_throws(): void
     {
         $page = new ListMedia;
 
@@ -66,5 +66,4 @@ class MediaListingTest extends TestCase
 
         $this->assertSame('created_at', $page->mediaSort);
     }
-
 }

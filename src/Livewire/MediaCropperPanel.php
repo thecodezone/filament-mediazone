@@ -6,9 +6,11 @@ namespace Codezone\MediaZone\Livewire;
 
 use Codezone\MediaZone\Media\CropPreset;
 use Codezone\MediaZone\Media\MediaLocation;
+use Codezone\MediaZone\Models\Media;
 use Codezone\MediaZone\Services\MediaGlide;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\ImageManagerStatic as Image;
 use Livewire\Component;
 
@@ -46,7 +48,7 @@ class MediaCropperPanel extends Component
 
     protected function getMediaModel(): string
     {
-        return config('media.model', \Codezone\MediaZone\Models\Media::class);
+        return config('media.model', Media::class);
     }
 
     public function getMediaProperty()
@@ -164,7 +166,7 @@ class MediaCropperPanel extends Component
             });
         }
 
-        $cropId = (string) \Illuminate\Support\Str::uuid();
+        $cropId = (string) Str::uuid();
         $ext = $format;
         $directory = rtrim(dirname($media->path), '/').'/crops';
         $path = $directory.'/'.$cropId.'.'.$ext;

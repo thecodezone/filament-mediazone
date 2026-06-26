@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Codezone\MediaZone\Http\Controllers\MediaGlideController;
+use Codezone\MediaZone\Models\Media;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,7 +13,7 @@ Route::middleware(config('media.glide.route_middleware', ['web']))
     ->name('media.glide');
 
 Route::get('/media-proxy/{id}', function (int $id) {
-    $model = config('media.model', \Codezone\MediaZone\Models\Media::class);
+    $model = config('media.model', Media::class);
     $media = $model::findOrFail($id);
     $stream = Storage::disk($media->disk)->readStream($media->path);
 
@@ -30,7 +31,7 @@ Route::get('/media-proxy/{id}', function (int $id) {
 })->middleware(['web', 'auth'])->name('media.proxy');
 
 Route::get('/media-download/{id}', function (int $id) {
-    $model = config('media.model', \Codezone\MediaZone\Models\Media::class);
+    $model = config('media.model', Media::class);
     $media = $model::findOrFail($id);
     $stream = Storage::disk($media->disk)->readStream($media->path);
 

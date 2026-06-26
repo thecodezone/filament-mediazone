@@ -10,6 +10,7 @@ use Filament\Actions;
 use Filament\Actions\StaticAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManagerStatic;
 
 class EditMedia extends EditRecord
 {
@@ -142,7 +143,7 @@ class EditMedia extends EditRecord
                 $data['url'] = null;
 
                 try {
-                    $image = \Intervention\Image\ImageManagerStatic::make($contents);
+                    $image = ImageManagerStatic::make($contents);
                     $data['width'] = $image->width();
                     $data['height'] = $image->height();
                 } catch (\Throwable) {

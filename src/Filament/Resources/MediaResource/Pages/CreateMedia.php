@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Filament\Resources\MediaResource\Pages;
 
 use Codezone\MediaZone\Filament\Resources\MediaResource;
+use Codezone\MediaZone\Models\Media;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,7 @@ class CreateMedia extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        $model = config('media.model', \Codezone\MediaZone\Models\Media::class);
+        $model = config('media.model', Media::class);
         $file = $data['file'] ?? null;
 
         if (! $file) {
