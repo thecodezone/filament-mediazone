@@ -204,7 +204,7 @@
                     <div class="mz-listing__tile-type-badge">
                         <span class="mz-listing__badge mz-listing__badge-{{ strtolower($item->ext ?? '') }}">{{ strtolower($item->ext ?? '—') }}</span>
                     </div>
-                    <div class="mz-listing__tile-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                    <div class="mz-listing__tile-actions" onclick="event.stopPropagation();">
                         @if ($item->url)
                         <a href="{{ $item->url }}" target="_blank" class="mz-listing__tile-action" title="View">
                             <x-filament::icon icon="heroicon-o-eye" class="w-3.5 h-3.5" />
