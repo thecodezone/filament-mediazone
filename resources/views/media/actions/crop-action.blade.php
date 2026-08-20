@@ -6,5 +6,15 @@
         :presets="$presets"
         :formats="$formats"
         :default-location="$defaultLocation ?? null"
+        :editing-crop-id="$editingCropId ?? null"
+        :initial-geometry="$initialGeometry ?? null"
+        :initial-key="$initialKey ?? null"
+        :initial-label="$initialLabel ?? null"
+        :initial-location="$initialLocation ?? null"
+        :initial-breakpoints="$initialBreakpoints ?? null"
+        :initial-format="$initialFormat ?? null"
+        :initial-quality="$initialQuality ?? null"
+        :initial-target-width="$initialTargetWidth ?? null"
+        :initial-target-height="$initialTargetHeight ?? null"
     />
 </div>

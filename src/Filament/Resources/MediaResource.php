@@ -6,7 +6,6 @@ namespace Codezone\MediaZone\Filament\Resources;
 
 use Codezone\MediaZone\Filament\Resources\MediaResource\Pages;
 use Codezone\MediaZone\Media\CropPreset;
-use Codezone\MediaZone\Media\MediaLocation;
 use Codezone\MediaZone\Models\Media;
 use Filament\Actions\StaticAction;
 use Filament\Forms;
@@ -18,7 +17,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
-use Livewire\Component;
 
 class MediaResource extends Resource
 {
@@ -164,54 +162,36 @@ class MediaResource extends Resource
                             Forms\Components\Actions\Action::make('edit_crop')
                                 ->label('Edit Crop')
                                 ->modalHeading('Edit Crop')
-                                ->modalSubmitActionLabel('Save')
-                                ->fillForm(function (array $arguments, $record): array {
-                                    $cropId = $arguments['id'] ?? null;
-                                    $crop = $cropId ? collect($record?->crops ?? [])->first(fn ($c) => ($c['id'] ?? null) === $cropId) : null;
+                                ->modalContent(function (array $arguments, $record) {
+                                    $crop = static::findCropByArguments($record, $arguments);
+
+                                    if (! $crop) {
+                                        return new HtmlString(
+                                            '<p class="text-sm text-gray-400">This crop no longer exists.</p>'
+                                        );
+                                    }
+
+                                    return view('mediazone::media.actions.crop-action', static::cropActionViewData($record, $crop));
+                                })
+                                ->modalSubmitAction(false)
+                                ->modalCancelAction(fn (StaticAction $action) => $action->label('Close'))
+                                ->extraModalFooterActions(function (array $arguments, $record): array {
+                                    if (! static::findCropByArguments($record, $arguments)) {
+                                        return [];
+                                    }
 
                                     return [
-                                        'key' => $crop['key'] ?? '',
-                                        'location' => $crop['location'] ?? '',
-                                        'breakpoints' => $crop['breakpoints'] ?? [],
+                                        StaticAction::make('save_crop')
+                                            ->button()
+                                            ->label('Save crop')
+                                            ->color('primary')
+                                            ->alpineClickHandler("\$dispatch('mz-cropper__save')")
+                                            ->extraAttributes(['data-mz-cropper__save-btn' => 'true']),
                                     ];
                                 })
-                                ->form(function (): array {
-                                    $locationOptions = MediaLocation::allAsOptions();
-
-                                    $fields = [];
-
-                                    if (count($locationOptions) > 1) {
-                                        $fields[] = Forms\Components\Select::make('location')
-                                            ->label('Location')
-                                            ->options($locationOptions)
-                                            ->live();
-                                        $fields[] = Forms\Components\TextInput::make('key')
-                                            ->label('Key')
-                                            ->hidden(fn (Forms\Get $get) => (bool) $get('location'))
-                                            ->placeholder('my_custom_crop');
-                                    } else {
-                                        $fields[] = Forms\Components\TextInput::make('key')
-                                            ->label('Key')
-                                            ->required();
-                                    }
-
-                                    $fields[] = Forms\Components\CheckboxList::make('breakpoints')
-                                        ->label('Breakpoints')
-                                        ->options([
-                                            'mobile' => 'Mobile',
-                                            'tablet' => 'Tablet',
-                                            'desktop' => 'Desktop',
-                                        ])
-                                        ->columns(3);
-
-                                    return $fields;
-                                })
-                                ->action(function (array $arguments, array $data, Component $livewire): void {
-                                    $cropId = $arguments['id'] ?? null;
-                                    if ($cropId) {
-                                        $livewire->updateCrop($cropId, $data);
-                                    }
-                                }),
+                                ->slideOver()
+                                ->modalWidth('screen')
+                                ->extraModalWindowAttributes(['style' => 'overflow:hidden;display:flex;flex-direction:column;']),
                         ]),
                 ])
                 ->hiddenOn('create'),
@@ -361,14 +341,46 @@ class MediaResource extends Resource
         return parent::getEloquentQuery();
     }
 
-    public static function cropActionViewData($media): array
+    public static function cropActionViewData($media, ?array $crop = null): array
     {
-        return [
+        $data = [
             'statePath' => 'crops',
-            'modalId' => 'crop-'.$media->id,
+            'modalId' => 'crop-'.$media->id.($crop['id'] ?? ''),
             'media' => $media->toArray(),
             'presets' => CropPreset::allAsArray(),
             'formats' => config('media.crop_formats', ['webp', 'jpg', 'png']),
         ];
+
+        if ($crop) {
+            $data['editingCropId'] = $crop['id'] ?? null;
+            $data['initialGeometry'] = $crop['geometry'] ?? null;
+            $data['initialKey'] = $crop['key'] ?? ($crop['crop']['key'] ?? null);
+            $data['initialLabel'] = $crop['crop']['label'] ?? null;
+            $data['initialLocation'] = $crop['location'] ?? null;
+            $data['initialBreakpoints'] = $crop['breakpoints'] ?? [];
+            $data['initialFormat'] = $crop['crop']['format'] ?? null;
+            $data['initialQuality'] = $crop['crop']['quality'] ?? null;
+            $data['initialTargetWidth'] = $crop['crop']['width'] ?? null;
+            $data['initialTargetHeight'] = $crop['crop']['height'] ?? null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Resolve the specific crop entry an `{id}` action argument refers to.
+     * Returns null both when the argument is missing and when the crop it
+     * names has since been deleted, so callers can degrade gracefully
+     * instead of erroring on a stale "Edit" click.
+     */
+    protected static function findCropByArguments($record, array $arguments): ?array
+    {
+        $cropId = $arguments['id'] ?? null;
+
+        if (! $cropId || ! $record) {
+            return null;
+        }
+
+        return collect($record->crops ?? [])->first(fn ($c) => ($c['id'] ?? null) === $cropId);
     }
 }

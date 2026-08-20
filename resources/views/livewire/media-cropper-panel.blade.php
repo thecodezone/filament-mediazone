@@ -2,7 +2,23 @@
 
 <div
     class="mz-cropper__shell"
-    x-data="mediaCropper({{ Js::from(['presets' => $presets, 'locations' => $locations, 'defaultFormat' => $formats[0] ?? 'webp', 'modalId' => $modalId, 'defaultLocation' => $defaultLocation]) }})"
+    x-data="mediaCropper({{ Js::from([
+        'presets' => $presets,
+        'locations' => $locations,
+        'defaultFormat' => $formats[0] ?? 'webp',
+        'modalId' => $modalId,
+        'defaultLocation' => $defaultLocation,
+        'editingCropId' => $editingCropId ?? null,
+        'initialGeometry' => $initialGeometry ?? null,
+        'initialKey' => $initialKey ?? null,
+        'initialLabel' => $initialLabel ?? null,
+        'initialLocation' => $initialLocation ?? null,
+        'initialBreakpoints' => $initialBreakpoints ?? null,
+        'initialFormat' => $initialFormat ?? null,
+        'initialQuality' => $initialQuality ?? null,
+        'initialTargetWidth' => $initialTargetWidth ?? null,
+        'initialTargetHeight' => $initialTargetHeight ?? null,
+    ]) }})"
     wire:ignore
     style="flex:1;min-height:0;overflow:hidden;"
 >
@@ -49,7 +65,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 </button>
                 {{-- Fit --}}
-                <button type="button" class="mz-cropper__tb-btn" title="Fit" x-on:click="cropper && cropper.reset()">
+                <button type="button" class="mz-cropper__tb-btn" title="Fit" x-on:click="cropper && (cropper.reset(), fitCanvasWithMargin())">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 20.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
                 </button>
                 <div class="mz-cropper__divider"></div>
@@ -71,7 +87,7 @@
                 </button>
                 <div class="mz-cropper__divider"></div>
                 {{-- Reset --}}
-                <button type="button" class="mz-cropper__tb-btn" title="Reset all" x-on:click="cropper && (cropper.reset(), cropData = cropper.getData(true))">
+                <button type="button" class="mz-cropper__tb-btn" title="Reset all" x-on:click="cropper && (cropper.reset(), fitCanvasWithMargin(), cropData = cropper.getData(true))">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.348A8.25 8.25 0 0 1 18.483 6.348L21 9M21 4.5v4.5h-4.5M19.5 14.652A8.25 8.25 0 0 1 5.517 17.652L3 15M3 19.5v-4.5h4.5"/></svg>
                 </button>
             </div>
@@ -87,6 +103,15 @@
                     <span><kbd class="mz-cropper__kbd">⌘Z</kbd> Undo</span>
                     <span><kbd class="mz-cropper__kbd">Esc</kbd> Cancel</span>
                 </div>
+
+                {{-- Shown when this crop has no stored geometry to restore, or the
+                     source image no longer matches the resolution it was saved
+                     against — the crop box below starts blank instead. --}}
+                <template x-if="editingCropId && _geometryUnavailable">
+                    <p class="mz-cropper__hint" style="margin:0 0 12px;padding:8px 10px;border-radius:6px;background:rgba(234,179,8,0.12);color:#a16207;">
+                        Original position unavailable — repositioning from scratch.
+                    </p>
+                </template>
 
                 {{-- Setup --}}
                 <div class="mz-cropper__group">

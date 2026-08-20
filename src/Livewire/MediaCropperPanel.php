@@ -26,6 +26,26 @@ class MediaCropperPanel extends Component
 
     public ?string $defaultLocation = null;
 
+    public ?string $editingCropId = null;
+
+    public ?array $initialGeometry = null;
+
+    public ?string $initialKey = null;
+
+    public ?string $initialLocation = null;
+
+    public ?array $initialBreakpoints = null;
+
+    public ?string $initialFormat = null;
+
+    public ?int $initialQuality = null;
+
+    public ?int $initialTargetWidth = null;
+
+    public ?int $initialTargetHeight = null;
+
+    public ?string $initialLabel = null;
+
     public function mount(
         int|array|null $media = null,
         string $statePath = '',
@@ -33,6 +53,16 @@ class MediaCropperPanel extends Component
         array $presets = [],
         array $formats = [],
         ?string $defaultLocation = null,
+        ?string $editingCropId = null,
+        ?array $initialGeometry = null,
+        ?string $initialKey = null,
+        ?string $initialLocation = null,
+        ?array $initialBreakpoints = null,
+        ?string $initialFormat = null,
+        ?int $initialQuality = null,
+        ?int $initialTargetWidth = null,
+        ?int $initialTargetHeight = null,
+        ?string $initialLabel = null,
     ): void {
         if (is_array($media)) {
             $this->mediaId = $media['id'] ?? null;
@@ -44,6 +74,16 @@ class MediaCropperPanel extends Component
         $this->statePath = $statePath;
         $this->modalId = $modalId;
         $this->defaultLocation = $defaultLocation;
+        $this->editingCropId = $editingCropId;
+        $this->initialGeometry = $initialGeometry;
+        $this->initialKey = $initialKey;
+        $this->initialLocation = $initialLocation;
+        $this->initialBreakpoints = $initialBreakpoints;
+        $this->initialFormat = $initialFormat;
+        $this->initialQuality = $initialQuality;
+        $this->initialTargetWidth = $initialTargetWidth;
+        $this->initialTargetHeight = $initialTargetHeight;
+        $this->initialLabel = $initialLabel;
     }
 
     protected function getMediaModel(): string
@@ -94,6 +134,18 @@ class MediaCropperPanel extends Component
             return;
         }
 
+        // When editing an existing crop, reuse its id (and, where possible,
+        // its baked file path) instead of minting a new one, so consumers
+        // referencing this crop by id (e.g. a location's stored crop_key)
+        // keep resolving to the same crop after it's re-baked. If the crop
+        // being edited was deleted out from under this request, there's
+        // nothing to replace, so it degrades to creating a new crop entry
+        // rather than erroring.
+        $editingCropId = $data['id'] ?? null;
+        $existingCrop = $editingCropId
+            ? collect($media->crops ?? [])->first(fn ($c) => ($c['id'] ?? null) === $editingCropId)
+            : null;
+
         $location = $data['location'] ?? null;
         $breakpoints = $data['breakpoints'] ?? ['mobile', 'tablet', 'desktop'];
         $key = trim($data['key'] ?? '') ?: ($location ?? 'custom');
@@ -118,6 +170,12 @@ class MediaCropperPanel extends Component
         $image = Image::make($fileContents);
         $image->orientate();
 
+        // Natural dimensions of the source file at the time of this crop, used
+        // later to detect whether the source has since been replaced at a
+        // different resolution (see Media::getCrop() consumers).
+        $sourceWidth = $image->width();
+        $sourceHeight = $image->height();
+
         if ($scaleX < 0) {
             $image->flip('h');
         }
@@ -129,9 +187,32 @@ class MediaCropperPanel extends Component
             $image->rotate(-$rotate, '#ffffff');
         }
 
+        // Geometry captured for persistence, defaulting to "no crop applied"
+        // (the full, post-transform image) when the request didn't specify one.
+        $geometryX = 0;
+        $geometryY = 0;
+        $geometryWidth = $image->width();
+        $geometryHeight = $image->height();
+
         if ($cropW > 0 && $cropH > 0) {
             $imgW = $image->width();
             $imgH = $image->height();
+
+            // Clamp the requested rectangle to a bounded region around the
+            // (post-rotation/flip) image - it may extend past the image edges
+            // (baked as whitespace padding below, e.g. for adding blank space
+            // above a photo), but only by a bounded, size-proportional amount.
+            // This defends against both stale geometry (the source file was
+            // replaced at a different, smaller resolution since this crop was
+            // last saved) and crafted payloads (a client sending extreme
+            // values directly to this endpoint) forcing an unbounded canvas
+            // allocation, while still allowing genuine editorial padding.
+            [$cropX, $cropY, $cropW, $cropH] = $this->clampCropRectangle($cropX, $cropY, $cropW, $cropH, $imgW, $imgH);
+
+            $geometryX = $cropX;
+            $geometryY = $cropY;
+            $geometryWidth = $cropW;
+            $geometryHeight = $cropH;
 
             $padLeft = $cropX < 0 ? abs($cropX) : 0;
             $padTop = $cropY < 0 ? abs($cropY) : 0;
@@ -139,10 +220,10 @@ class MediaCropperPanel extends Component
             $padBottom = max(0, ($cropY + $cropH) - $imgH);
 
             if ($padLeft || $padTop || $padRight || $padBottom) {
-                $newW = $imgW + $padLeft + $padRight;
-                $newH = $imgH + $padTop + $padBottom;
+                $paddedWidth = $imgW + $padLeft + $padRight;
+                $paddedHeight = $imgH + $padTop + $padBottom;
 
-                $canvas = Image::canvas($newW, $newH, '#ffffff');
+                $canvas = Image::canvas($paddedWidth, $paddedHeight, '#ffffff');
                 $canvas->insert($image, 'top-left', $padLeft, $padTop);
                 $image = $canvas;
 
@@ -150,7 +231,7 @@ class MediaCropperPanel extends Component
                 $cropY += $padTop;
             }
 
-            $image->crop($cropW, $cropH, max(0, $cropX), max(0, $cropY));
+            $image->crop($cropW, $cropH, $cropX, $cropY);
         }
 
         if ($targetWidth > 0 && $targetHeight > 0) {
@@ -166,13 +247,19 @@ class MediaCropperPanel extends Component
             });
         }
 
-        $cropId = (string) Str::uuid();
+        $cropId = $existingCrop['id'] ?? (string) Str::uuid();
         $ext = $format;
         $directory = rtrim(dirname($media->path), '/').'/crops';
         $path = $directory.'/'.$cropId.'.'.$ext;
 
         $encoded = $image->encode($ext, $quality);
         Storage::disk($media->disk)->put($path, $encoded->getEncoded());
+
+        // Clean up the previous baked output if this edit changed its
+        // extension (a format change), so it doesn't linger as an orphan.
+        if ($existingCrop && ! empty($existingCrop['path']) && $existingCrop['path'] !== $path) {
+            Storage::disk($media->disk)->delete($existingCrop['path']);
+        }
 
         $url = Storage::disk($media->disk)->url($path).'?v='.time();
         $size = strlen($encoded->getEncoded());
@@ -201,12 +288,30 @@ class MediaCropperPanel extends Component
             'size' => $size,
             'type' => 'image/'.$ext,
             'ext' => $ext,
+            'geometry' => [
+                'x' => $geometryX,
+                'y' => $geometryY,
+                'width' => $geometryWidth,
+                'height' => $geometryHeight,
+                'rotate' => $rotate,
+                'scaleX' => $scaleX,
+                'scaleY' => $scaleY,
+                'source_width' => $sourceWidth,
+                'source_height' => $sourceHeight,
+            ],
             'updated_at' => now()->toISOString(),
         ];
 
         $crops = $media->crops ?? [];
 
-        $filteredCrops = array_map(function ($existing) use ($key, $breakpoints) {
+        $replacedExisting = false;
+        $filteredCrops = array_map(function ($existing) use ($key, $breakpoints, $cropId, $cropEntry, &$replacedExisting) {
+            if (($existing['id'] ?? null) === $cropId) {
+                $replacedExisting = true;
+
+                return $cropEntry;
+            }
+
             if (($existing['key'] ?? ($existing['crop']['key'] ?? null)) === $key) {
                 $existing['breakpoints'] = array_values(array_diff($existing['breakpoints'] ?? [], $breakpoints));
             }
@@ -214,7 +319,10 @@ class MediaCropperPanel extends Component
             return $existing;
         }, $crops);
 
-        $filteredCrops[] = $cropEntry;
+        if (! $replacedExisting) {
+            $filteredCrops[] = $cropEntry;
+        }
+
         $media->crops = $filteredCrops;
         $media->timestamps = false;
         $media->saveQuietly();
@@ -223,6 +331,46 @@ class MediaCropperPanel extends Component
         $media->removeBreakpointsFromSiblings($key, $breakpoints);
 
         $this->dispatch('add-crop', statePath: $this->statePath, mediaId: $media->id, cropId: $cropId, crop: $cropEntry);
+    }
+
+    /**
+     * How far a crop rectangle may extend beyond the source image on each
+     * side, as a multiple of that axis's source dimension. Baked as
+     * whitespace padding (e.g. deliberately adding blank space above a
+     * photo) - a real, wanted editorial workflow - so this isn't clamped to
+     * zero. It's bounded to a small, size-proportional multiple rather than
+     * left unbounded, so a stale request (source replaced at a smaller
+     * resolution) or a crafted one (extreme x/y/width/height sent directly
+     * to this endpoint) can't force an arbitrarily large canvas allocation.
+     */
+    private const MAX_PADDING_RATIO = 1.0;
+
+    /**
+     * Clamp a requested crop rectangle to a bounded region around
+     * [0, 0, $boundsWidth, $boundsHeight] - it may extend past the bounds
+     * (see MAX_PADDING_RATIO) but not arbitrarily far. Malformed input
+     * (non-positive width/height, an origin or extent far beyond the
+     * bounds) is corrected rather than rejected outright, so a stale or
+     * crafted request still produces a safe crop instead of failing the
+     * whole save.
+     *
+     * @return array{0: int, 1: int, 2: int, 3: int} [x, y, width, height]
+     */
+    protected function clampCropRectangle(int $x, int $y, int $width, int $height, int $boundsWidth, int $boundsHeight): array
+    {
+        $boundsWidth = max(1, $boundsWidth);
+        $boundsHeight = max(1, $boundsHeight);
+
+        $padX = (int) round($boundsWidth * self::MAX_PADDING_RATIO);
+        $padY = (int) round($boundsHeight * self::MAX_PADDING_RATIO);
+
+        $width = max(1, min($width, $boundsWidth + (2 * $padX)));
+        $height = max(1, min($height, $boundsHeight + (2 * $padY)));
+
+        $x = max(-$padX, min($x, $boundsWidth + $padX - $width));
+        $y = max(-$padY, min($y, $boundsHeight + $padY - $height));
+
+        return [$x, $y, $width, $height];
     }
 
     public function deleteCrop(string $id): void

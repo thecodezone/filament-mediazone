@@ -23,9 +23,34 @@ document.addEventListener('alpine:init', function () {
             guideLines: [],
             _cropBoxData: null,
 
+            // Editing an existing crop: its id (so save() replaces it in place
+            // instead of creating a new one), its previously-saved geometry to
+            // restore into Cropper once ready, and whether that restore had to
+            // fall back because the source image no longer matches.
+            editingCropId: config.editingCropId || null,
+            _initialGeometry: config.initialGeometry || null,
+            _geometryUnavailable: false,
+
             init: function () {
-                // Pre-select the default location and its matching preset
-                if (this.location) {
+                if (this.editingCropId) {
+                    // Editing: seed the sidebar with this crop's own prior
+                    // settings rather than defaulting/guessing from a location.
+                    this.cropKey = config.initialKey || '';
+                    this.label = config.initialLabel || config.initialKey || '';
+                    this.location = config.initialLocation || '';
+                    this.breakpoints = config.initialBreakpoints && config.initialBreakpoints.length
+                        ? config.initialBreakpoints.slice()
+                        : [];
+                    this.format = config.initialFormat || this.format;
+                    this.quality = config.initialQuality || this.quality;
+                    this.targetWidth = config.initialTargetWidth || 0;
+                    this.targetHeight = config.initialTargetHeight || 0;
+                    this.preset = 'custom';
+                    if (!this._initialGeometry) {
+                        this._geometryUnavailable = true;
+                    }
+                } else if (this.location) {
+                    // Pre-select the default location and its matching preset
                     this.selectLocation();
                 }
                 this._tryInit();
@@ -60,7 +85,14 @@ document.addEventListener('alpine:init', function () {
                     scalable: true,
                     minCanvasWidth: 0,
                     minCanvasHeight: 0,
-                    ready: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
+                    ready: function () {
+                        self._restoreGeometryOrFallback();
+                        // Only auto-fit a fresh, blank crop box — never override a
+                        // successfully restored/edited geometry with the default layout.
+                        if (!self.editingCropId || !self._initialGeometry || self._geometryUnavailable) {
+                            self.fitCanvasWithMargin();
+                        }
+                    },
                     cropstart: function () { self._userHasInteracted = true; },
                     cropend: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
                     crop: function () { self._cropBoxData = self.cropper.getCropBoxData(); },
@@ -82,6 +114,85 @@ document.addEventListener('alpine:init', function () {
                         }
                     },
                 });
+            },
+
+            // Restore this crop's previously-saved rectangle into the freshly
+            // initialized Cropper instance, or fall back to the default blank
+            // crop box (today's behavior) when there's nothing to restore or
+            // the source image no longer matches what the geometry was
+            // computed against (e.g. the file was replaced at a different
+            // resolution since this crop was last saved).
+            _restoreGeometryOrFallback: function () {
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
+
+                if (!this.editingCropId || !this._initialGeometry) {
+                    return;
+                }
+
+                var g = this._initialGeometry;
+                var natural = this.cropper.getImageData();
+
+                if (
+                    typeof g.source_width !== 'number' ||
+                    typeof g.source_height !== 'number' ||
+                    g.source_width !== natural.naturalWidth ||
+                    g.source_height !== natural.naturalHeight
+                ) {
+                    this._geometryUnavailable = true;
+                    return;
+                }
+
+                this.cropper.setData({
+                    x: g.x, y: g.y, width: g.width, height: g.height,
+                    rotate: g.rotate, scaleX: g.scaleX, scaleY: g.scaleY,
+                });
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
+            },
+
+            // Shrinks the image very slightly within the container (leaving only a
+            // thin margin per side — the image still reads as filling the screen)
+            // and expands the crop box to fill the full container, so there's
+            // always a bit of free space around the image for the crop box to be
+            // dragged past its edges (adding whitespace) without first zooming out
+            // manually.
+            fitCanvasWithMargin: function () {
+                if (!this.cropper) return;
+
+                var contData = this.cropper.getContainerData();
+                var imgData = this.cropper.getImageData();
+                if (!contData.width || !contData.height || !imgData.naturalWidth || !imgData.naturalHeight) return;
+
+                // Shrink the image to a fraction of the container so the crop box
+                // (sized to the full container) has room to move past every edge.
+                var margin = 0.98;
+                var imgRatio = imgData.naturalWidth / imgData.naturalHeight;
+                var canvasH = contData.height * margin;
+                var canvasW = canvasH * imgRatio;
+                if (canvasW > contData.width * margin) {
+                    canvasW = contData.width * margin;
+                    canvasH = canvasW / imgRatio;
+                }
+                var canvasLeft = (contData.width - canvasW) / 2;
+                var canvasTop = (contData.height - canvasH) / 2;
+
+                this.cropper.setCanvasData({
+                    left: canvasLeft,
+                    top: canvasTop,
+                    width: canvasW,
+                    height: canvasH,
+                });
+
+                this.cropper.setCropBoxData({
+                    left: 0,
+                    top: 0,
+                    width: contData.width,
+                    height: contData.height,
+                });
+
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
             },
 
             selectLocation: function () {
@@ -144,17 +255,24 @@ document.addEventListener('alpine:init', function () {
                     var imgData = self.cropper.getImageData();
                     var contData = self.cropper.getContainerData();
 
-                    // Scale the canvas so it fills the container height, clamped to container width.
-                    // Always derived from natural dimensions so repeated calls are idempotent.
+                    // Shrink the canvas very slightly (rather than filling the
+                    // container exactly) so there's always a thin margin of free
+                    // screen space around the image — the image still reads as
+                    // filling the screen, but the crop box has a bit of room to be
+                    // dragged past its edges to add whitespace. Otherwise, once the
+                    // canvas fills the container with zero margin, there's no room
+                    // left to drag the crop box further. Always derived from natural
+                    // dimensions so repeated calls are idempotent.
+                    var margin = 0.98;
                     var imgRatio = imgData.naturalWidth / imgData.naturalHeight;
-                    var canvasH = contData.height;
+                    var canvasH = contData.height * margin;
                     var canvasW = canvasH * imgRatio;
-                    if (canvasW > contData.width) {
-                        canvasW = contData.width;
+                    if (canvasW > contData.width * margin) {
+                        canvasW = contData.width * margin;
                         canvasH = canvasW / imgRatio;
                     }
                     var canvasLeft = (contData.width - canvasW) / 2;
-                    var canvasTop = 0;
+                    var canvasTop = (contData.height - canvasH) / 2;
 
                     self.cropper.setCanvasData({
                         left: canvasLeft,
@@ -163,8 +281,9 @@ document.addEventListener('alpine:init', function () {
                         height: canvasH,
                     });
 
-                    // Fit the crop box inside the canvas, honouring the preset aspect ratio,
-                    // anchored to the top-left of the canvas.
+                    // Fit the crop box to the canvas at the preset aspect ratio,
+                    // centered within the container so there's margin to drag past
+                    // every edge, not just the ones the aspect ratio already clips.
                     var cropW = canvasW;
                     var cropH = canvasH;
                     if (aspectRatio) {
@@ -175,8 +294,8 @@ document.addEventListener('alpine:init', function () {
                         }
                     }
                     self.cropper.setCropBoxData({
-                        left: canvasLeft + (canvasW - cropW) / 2,
-                        top: canvasTop,
+                        left: (contData.width - cropW) / 2,
+                        top: (contData.height - cropH) / 2,
                         width: cropW,
                         height: cropH,
                     });
@@ -242,6 +361,7 @@ document.addEventListener('alpine:init', function () {
                 var d = this.cropper.getData(true);
                 try {
                     await this.$wire.saveCrop({
+                        id: this.editingCropId || null,
                         x: d.x, y: d.y,
                         width: d.width, height: d.height,
                         rotate: d.rotate,

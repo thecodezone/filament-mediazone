@@ -6,6 +6,7 @@ namespace Codezone\MediaZone\Tests;
 
 use Codezone\MediaZone\MediaZoneServiceProvider;
 use Codezone\MediaZone\Models\Media;
+use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
@@ -19,6 +20,7 @@ abstract class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app): array
     {
         return [
+            LivewireServiceProvider::class,
             MediaZoneServiceProvider::class,
         ];
     }
