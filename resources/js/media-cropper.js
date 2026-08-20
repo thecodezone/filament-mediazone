@@ -85,7 +85,14 @@ document.addEventListener('alpine:init', function () {
                     scalable: true,
                     minCanvasWidth: 0,
                     minCanvasHeight: 0,
-                    ready: function () { self._restoreGeometryOrFallback(); },
+                    ready: function () {
+                        self._restoreGeometryOrFallback();
+                        // Only auto-fit a fresh, blank crop box — never override a
+                        // successfully restored/edited geometry with the default layout.
+                        if (!self.editingCropId || !self._initialGeometry || self._geometryUnavailable) {
+                            self.fitCanvasWithMargin();
+                        }
+                    },
                     cropstart: function () { self._userHasInteracted = true; },
                     cropend: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
                     crop: function () { self._cropBoxData = self.cropper.getCropBoxData(); },
@@ -140,6 +147,50 @@ document.addEventListener('alpine:init', function () {
                     x: g.x, y: g.y, width: g.width, height: g.height,
                     rotate: g.rotate, scaleX: g.scaleX, scaleY: g.scaleY,
                 });
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
+            },
+
+            // Shrinks the image very slightly within the container (leaving only a
+            // thin margin per side — the image still reads as filling the screen)
+            // and expands the crop box to fill the full container, so there's
+            // always a bit of free space around the image for the crop box to be
+            // dragged past its edges (adding whitespace) without first zooming out
+            // manually.
+            fitCanvasWithMargin: function () {
+                if (!this.cropper) return;
+
+                var contData = this.cropper.getContainerData();
+                var imgData = this.cropper.getImageData();
+                if (!contData.width || !contData.height || !imgData.naturalWidth || !imgData.naturalHeight) return;
+
+                // Shrink the image to a fraction of the container so the crop box
+                // (sized to the full container) has room to move past every edge.
+                var margin = 0.98;
+                var imgRatio = imgData.naturalWidth / imgData.naturalHeight;
+                var canvasH = contData.height * margin;
+                var canvasW = canvasH * imgRatio;
+                if (canvasW > contData.width * margin) {
+                    canvasW = contData.width * margin;
+                    canvasH = canvasW / imgRatio;
+                }
+                var canvasLeft = (contData.width - canvasW) / 2;
+                var canvasTop = (contData.height - canvasH) / 2;
+
+                this.cropper.setCanvasData({
+                    left: canvasLeft,
+                    top: canvasTop,
+                    width: canvasW,
+                    height: canvasH,
+                });
+
+                this.cropper.setCropBoxData({
+                    left: 0,
+                    top: 0,
+                    width: contData.width,
+                    height: contData.height,
+                });
+
                 this.cropData = this.cropper.getData(true);
                 this._cropBoxData = this.cropper.getCropBoxData();
             },
@@ -204,17 +255,24 @@ document.addEventListener('alpine:init', function () {
                     var imgData = self.cropper.getImageData();
                     var contData = self.cropper.getContainerData();
 
-                    // Scale the canvas so it fills the container height, clamped to container width.
-                    // Always derived from natural dimensions so repeated calls are idempotent.
+                    // Shrink the canvas very slightly (rather than filling the
+                    // container exactly) so there's always a thin margin of free
+                    // screen space around the image — the image still reads as
+                    // filling the screen, but the crop box has a bit of room to be
+                    // dragged past its edges to add whitespace. Otherwise, once the
+                    // canvas fills the container with zero margin, there's no room
+                    // left to drag the crop box further. Always derived from natural
+                    // dimensions so repeated calls are idempotent.
+                    var margin = 0.98;
                     var imgRatio = imgData.naturalWidth / imgData.naturalHeight;
-                    var canvasH = contData.height;
+                    var canvasH = contData.height * margin;
                     var canvasW = canvasH * imgRatio;
-                    if (canvasW > contData.width) {
-                        canvasW = contData.width;
+                    if (canvasW > contData.width * margin) {
+                        canvasW = contData.width * margin;
                         canvasH = canvasW / imgRatio;
                     }
                     var canvasLeft = (contData.width - canvasW) / 2;
-                    var canvasTop = 0;
+                    var canvasTop = (contData.height - canvasH) / 2;
 
                     self.cropper.setCanvasData({
                         left: canvasLeft,
@@ -223,8 +281,9 @@ document.addEventListener('alpine:init', function () {
                         height: canvasH,
                     });
 
-                    // Fit the crop box inside the canvas, honouring the preset aspect ratio,
-                    // anchored to the top-left of the canvas.
+                    // Fit the crop box to the canvas at the preset aspect ratio,
+                    // centered within the container so there's margin to drag past
+                    // every edge, not just the ones the aspect ratio already clips.
                     var cropW = canvasW;
                     var cropH = canvasH;
                     if (aspectRatio) {
@@ -235,8 +294,8 @@ document.addEventListener('alpine:init', function () {
                         }
                     }
                     self.cropper.setCropBoxData({
-                        left: canvasLeft + (canvasW - cropW) / 2,
-                        top: canvasTop,
+                        left: (contData.width - cropW) / 2,
+                        top: (contData.height - cropH) / 2,
                         width: cropW,
                         height: cropH,
                     });
@@ -266,30 +325,6 @@ document.addEventListener('alpine:init', function () {
                 var d = this.cropper.getData(true);
                 this.cropper.scaleY(d.scaleY === -1 ? 1 : -1);
                 this.cropData = this.cropper.getData(true);
-            },
-
-            // Nudges the image within the crop box to open up whitespace on one
-            // side (e.g. "add space above"). When the crop box already covers the
-            // whole visible canvas — the common case for a plain, uncropped photo —
-            // there's no free screen space to drag the crop box itself past the
-            // image edge; the only way to create that space is to move the image
-            // the other way, which cropper.move() does directly via its API rather
-            // than requiring the zoom-out/re-zoom-in workaround this replaces.
-            addSpace: function (direction) {
-                if (!this.cropper) return;
-                this._userHasInteracted = true;
-                var canvas = this.cropper.getCanvasData();
-                var stepX = Math.max(10, canvas.width * 0.1);
-                var stepY = Math.max(10, canvas.height * 0.1);
-                var dx = 0;
-                var dy = 0;
-                if (direction === 'above') dy = stepY;
-                else if (direction === 'below') dy = -stepY;
-                else if (direction === 'left') dx = stepX;
-                else if (direction === 'right') dx = -stepX;
-                this.cropper.move(dx, dy);
-                this.cropData = this.cropper.getData(true);
-                this._cropBoxData = this.cropper.getCropBoxData();
             },
 
             guideLineStyle: function (guide) {

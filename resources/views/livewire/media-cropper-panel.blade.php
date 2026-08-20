@@ -65,7 +65,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 </button>
                 {{-- Fit --}}
-                <button type="button" class="mz-cropper__tb-btn" title="Fit" x-on:click="cropper && cropper.reset()">
+                <button type="button" class="mz-cropper__tb-btn" title="Fit" x-on:click="cropper && (cropper.reset(), fitCanvasWithMargin())">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 20.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
                 </button>
                 <div class="mz-cropper__divider"></div>
@@ -86,26 +86,8 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4.5M19.5 3v4.5M19.5 3 12 10.5"/><path d="M19.5 12a7.5 7.5 0 1 1-7.5-7.5"/></svg>
                 </button>
                 <div class="mz-cropper__divider"></div>
-                {{-- Add whitespace by nudging the image within the crop box, rather
-                     than the crop box itself — when the crop box already fills the
-                     whole canvas, there's no room on screen to drag it further, so
-                     the only way to make space on a given side is to move the image
-                     the other way. --}}
-                <button type="button" class="mz-cropper__tb-btn" title="Add space above" x-on:click="addSpace('above')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19.5V6M12 6l-4.5 4.5M12 6l4.5 4.5"/><path d="M4.5 3.75h15" stroke-dasharray="2 2"/></svg>
-                </button>
-                <button type="button" class="mz-cropper__tb-btn" title="Add space below" x-on:click="addSpace('below')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v13.5M12 18l-4.5-4.5M12 18l4.5-4.5"/><path d="M4.5 20.25h15" stroke-dasharray="2 2"/></svg>
-                </button>
-                <button type="button" class="mz-cropper__tb-btn" title="Add space to the left" x-on:click="addSpace('left')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12H6M6 12l4.5-4.5M6 12l4.5 4.5"/><path d="M3.75 4.5v15" stroke-dasharray="2 2"/></svg>
-                </button>
-                <button type="button" class="mz-cropper__tb-btn" title="Add space to the right" x-on:click="addSpace('right')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h13.5M18 12l-4.5-4.5M18 12l-4.5 4.5"/><path d="M20.25 4.5v15" stroke-dasharray="2 2"/></svg>
-                </button>
-                <div class="mz-cropper__divider"></div>
                 {{-- Reset --}}
-                <button type="button" class="mz-cropper__tb-btn" title="Reset all" x-on:click="cropper && (cropper.reset(), cropData = cropper.getData(true))">
+                <button type="button" class="mz-cropper__tb-btn" title="Reset all" x-on:click="cropper && (cropper.reset(), fitCanvasWithMargin(), cropData = cropper.getData(true))">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9.348A8.25 8.25 0 0 1 18.483 6.348L21 9M21 4.5v4.5h-4.5M19.5 14.652A8.25 8.25 0 0 1 5.517 17.652L3 15M3 19.5v-4.5h4.5"/></svg>
                 </button>
             </div>
