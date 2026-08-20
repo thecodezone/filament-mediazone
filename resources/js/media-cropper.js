@@ -23,9 +23,34 @@ document.addEventListener('alpine:init', function () {
             guideLines: [],
             _cropBoxData: null,
 
+            // Editing an existing crop: its id (so save() replaces it in place
+            // instead of creating a new one), its previously-saved geometry to
+            // restore into Cropper once ready, and whether that restore had to
+            // fall back because the source image no longer matches.
+            editingCropId: config.editingCropId || null,
+            _initialGeometry: config.initialGeometry || null,
+            _geometryUnavailable: false,
+
             init: function () {
-                // Pre-select the default location and its matching preset
-                if (this.location) {
+                if (this.editingCropId) {
+                    // Editing: seed the sidebar with this crop's own prior
+                    // settings rather than defaulting/guessing from a location.
+                    this.cropKey = config.initialKey || '';
+                    this.label = config.initialLabel || config.initialKey || '';
+                    this.location = config.initialLocation || '';
+                    this.breakpoints = config.initialBreakpoints && config.initialBreakpoints.length
+                        ? config.initialBreakpoints.slice()
+                        : [];
+                    this.format = config.initialFormat || this.format;
+                    this.quality = config.initialQuality || this.quality;
+                    this.targetWidth = config.initialTargetWidth || 0;
+                    this.targetHeight = config.initialTargetHeight || 0;
+                    this.preset = 'custom';
+                    if (!this._initialGeometry) {
+                        this._geometryUnavailable = true;
+                    }
+                } else if (this.location) {
+                    // Pre-select the default location and its matching preset
                     this.selectLocation();
                 }
                 this._tryInit();
@@ -60,7 +85,7 @@ document.addEventListener('alpine:init', function () {
                     scalable: true,
                     minCanvasWidth: 0,
                     minCanvasHeight: 0,
-                    ready: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
+                    ready: function () { self._restoreGeometryOrFallback(); },
                     cropstart: function () { self._userHasInteracted = true; },
                     cropend: function () { self.cropData = self.cropper.getData(true); self._cropBoxData = self.cropper.getCropBoxData(); },
                     crop: function () { self._cropBoxData = self.cropper.getCropBoxData(); },
@@ -82,6 +107,41 @@ document.addEventListener('alpine:init', function () {
                         }
                     },
                 });
+            },
+
+            // Restore this crop's previously-saved rectangle into the freshly
+            // initialized Cropper instance, or fall back to the default blank
+            // crop box (today's behavior) when there's nothing to restore or
+            // the source image no longer matches what the geometry was
+            // computed against (e.g. the file was replaced at a different
+            // resolution since this crop was last saved).
+            _restoreGeometryOrFallback: function () {
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
+
+                if (!this.editingCropId || !this._initialGeometry) {
+                    return;
+                }
+
+                var g = this._initialGeometry;
+                var natural = this.cropper.getImageData();
+
+                if (
+                    typeof g.source_width !== 'number' ||
+                    typeof g.source_height !== 'number' ||
+                    g.source_width !== natural.naturalWidth ||
+                    g.source_height !== natural.naturalHeight
+                ) {
+                    this._geometryUnavailable = true;
+                    return;
+                }
+
+                this.cropper.setData({
+                    x: g.x, y: g.y, width: g.width, height: g.height,
+                    rotate: g.rotate, scaleX: g.scaleX, scaleY: g.scaleY,
+                });
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
             },
 
             selectLocation: function () {
@@ -242,6 +302,7 @@ document.addEventListener('alpine:init', function () {
                 var d = this.cropper.getData(true);
                 try {
                     await this.$wire.saveCrop({
+                        id: this.editingCropId || null,
                         x: d.x, y: d.y,
                         width: d.width, height: d.height,
                         rotate: d.rotate,

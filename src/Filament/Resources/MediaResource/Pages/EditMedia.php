@@ -60,45 +60,6 @@ class EditMedia extends EditRecord
         return $this->getResource()::getUrl('index');
     }
 
-    public function updateCrop(string $id, array $data): void
-    {
-        $record = $this->getRecord();
-
-        $newLocation = $data['location'] ?? null;
-        $newKey = trim($data['key'] ?? '') ?: $newLocation ?: null;
-        $newBreakpoints = array_values(array_filter((array) ($data['breakpoints'] ?? [])));
-
-        $crops = array_map(function ($c) use ($id, $newKey, $newLocation, $newBreakpoints) {
-            if (($c['id'] ?? null) === $id) {
-                if ($newKey !== null) {
-                    $c['key'] = $newKey;
-                    $c['name'] = $newKey;
-                    if (isset($c['crop']['key'])) {
-                        $c['crop']['key'] = $newKey;
-                    }
-                }
-                $c['location'] = $newLocation;
-                $c['breakpoints'] = $newBreakpoints;
-            } elseif ($newKey && ! empty($newBreakpoints) && ($c['key'] ?? null) === $newKey) {
-                $c['breakpoints'] = array_values(array_diff($c['breakpoints'] ?? [], $newBreakpoints));
-            }
-
-            return $c;
-        }, $record->crops ?? []);
-
-        $record->crops = array_values($crops);
-        $record->timestamps = false;
-        $record->saveQuietly();
-        $record->timestamps = true;
-
-        if (! empty($newBreakpoints) && $newKey) {
-            $record->removeBreakpointsFromSiblings($newKey, $newBreakpoints);
-        }
-
-        $this->unmountFormComponentAction();
-        $this->refreshFormData(['crops']);
-    }
-
     public function deleteCrop(string $id): void
     {
         $record = $this->getRecord();

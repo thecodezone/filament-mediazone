@@ -2,7 +2,23 @@
 
 <div
     class="mz-cropper__shell"
-    x-data="mediaCropper({{ Js::from(['presets' => $presets, 'locations' => $locations, 'defaultFormat' => $formats[0] ?? 'webp', 'modalId' => $modalId, 'defaultLocation' => $defaultLocation]) }})"
+    x-data="mediaCropper({{ Js::from([
+        'presets' => $presets,
+        'locations' => $locations,
+        'defaultFormat' => $formats[0] ?? 'webp',
+        'modalId' => $modalId,
+        'defaultLocation' => $defaultLocation,
+        'editingCropId' => $editingCropId ?? null,
+        'initialGeometry' => $initialGeometry ?? null,
+        'initialKey' => $initialKey ?? null,
+        'initialLabel' => $initialLabel ?? null,
+        'initialLocation' => $initialLocation ?? null,
+        'initialBreakpoints' => $initialBreakpoints ?? null,
+        'initialFormat' => $initialFormat ?? null,
+        'initialQuality' => $initialQuality ?? null,
+        'initialTargetWidth' => $initialTargetWidth ?? null,
+        'initialTargetHeight' => $initialTargetHeight ?? null,
+    ]) }})"
     wire:ignore
     style="flex:1;min-height:0;overflow:hidden;"
 >
@@ -87,6 +103,15 @@
                     <span><kbd class="mz-cropper__kbd">⌘Z</kbd> Undo</span>
                     <span><kbd class="mz-cropper__kbd">Esc</kbd> Cancel</span>
                 </div>
+
+                {{-- Shown when this crop has no stored geometry to restore, or the
+                     source image no longer matches the resolution it was saved
+                     against — the crop box below starts blank instead. --}}
+                <template x-if="editingCropId && _geometryUnavailable">
+                    <p class="mz-cropper__hint" style="margin:0 0 12px;padding:8px 10px;border-radius:6px;background:rgba(234,179,8,0.12);color:#a16207;">
+                        Original position unavailable — repositioning from scratch.
+                    </p>
+                </template>
 
                 {{-- Setup --}}
                 <div class="mz-cropper__group">
