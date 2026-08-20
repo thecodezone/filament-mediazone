@@ -22,6 +22,9 @@ document.addEventListener('alpine:init', function () {
             _userHasInteracted: false,
             guideLines: [],
             _cropBoxData: null,
+            toolbarStyle: '',
+            toolbarDragging: false,
+            _toolbarDrag: null,
 
             // Editing an existing crop: its id (so save() replaces it in place
             // instead of creating a new one), its previously-saved geometry to
@@ -336,6 +339,59 @@ document.addEventListener('alpine:init', function () {
                 }
                 var left = box.left + (box.width * guide.percent / 100);
                 return 'left:' + left + 'px;top:' + box.top + 'px;height:' + box.height + 'px;';
+            },
+
+            // Dragging the floating toolbar around the canvas. Grabbing the
+            // handle switches it from its default CSS-centered position to an
+            // explicit left/top pinned to wherever it's dropped, clamped so it
+            // can't be dragged outside the visible canvas.
+            toolbarDragStart: function (e) {
+                e.preventDefault();
+                var toolbarEl = this.$refs.toolbar;
+                var canvasEl = toolbarEl.offsetParent;
+                if (!toolbarEl || !canvasEl) return;
+                var canvasRect = canvasEl.getBoundingClientRect();
+                var toolbarRect = toolbarEl.getBoundingClientRect();
+                var point = e.touches ? e.touches[0] : e;
+                var self = this;
+
+                this._toolbarDrag = {
+                    startX: point.clientX,
+                    startY: point.clientY,
+                    originLeft: toolbarRect.left - canvasRect.left,
+                    originTop: toolbarRect.top - canvasRect.top,
+                    maxLeft: canvasRect.width - toolbarRect.width,
+                    maxTop: canvasRect.height - toolbarRect.height,
+                };
+                this.toolbarDragging = true;
+
+                var move = function (ev) { self._toolbarDragMove(ev); };
+                var up = function () { self._toolbarDragEnd(move, up); };
+                document.addEventListener('mousemove', move);
+                document.addEventListener('mouseup', up);
+                document.addEventListener('touchmove', move, { passive: false });
+                document.addEventListener('touchend', up);
+            },
+
+            _toolbarDragMove: function (e) {
+                if (!this._toolbarDrag) return;
+                e.preventDefault();
+                var d = this._toolbarDrag;
+                var point = e.touches ? e.touches[0] : e;
+                var left = d.originLeft + (point.clientX - d.startX);
+                var top = d.originTop + (point.clientY - d.startY);
+                left = Math.max(0, Math.min(left, Math.max(0, d.maxLeft)));
+                top = Math.max(0, Math.min(top, Math.max(0, d.maxTop)));
+                this.toolbarStyle = 'left:' + left + 'px; top:' + top + 'px; right:auto; bottom:auto; transform:none;';
+            },
+
+            _toolbarDragEnd: function (move, up) {
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', up);
+                document.removeEventListener('touchmove', move);
+                document.removeEventListener('touchend', up);
+                this._toolbarDrag = null;
+                this.toolbarDragging = false;
             },
 
             save: async function () {

@@ -24,13 +24,22 @@
 
 /* Floating toolbar */
 .mz-cropper__toolbar {
-    position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); z-index: 10;
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
     display: flex; align-items: center; gap: 2px;
     background: #fff; border-radius: 10px; padding: 5px;
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.12), 0 4px 6px -4px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(0,0,0,0.06);
     white-space: nowrap;
 }
 .mz-cropper__toolbar .mz-cropper__divider { width: 1px; height: 18px; background: #e5e7eb; margin: 0 3px; flex-shrink: 0; }
+.mz-cropper__tb-grip {
+    cursor: grab; touch-action: none;
+    width: 16px; height: 32px; margin-right: 3px; border-radius: 6px;
+    display: grid; place-items: center; flex-shrink: 0;
+    color: #d1d5db;
+}
+.mz-cropper__tb-grip:active { cursor: grabbing; }
+.mz-cropper__tb-grip svg { width: 12px; height: 18px; display: block; pointer-events: none; }
+.mz-cropper__toolbar--dragging { opacity: 0.9; }
 .mz-cropper__tb-btn {
     all: unset; cursor: pointer;
     width: 32px; height: 32px; border-radius: 6px;
@@ -221,6 +230,7 @@
 .dark .mz-cropper__seg-btn--active { background: #374151; color: #f9fafb; }
 .dark .mz-cropper__toolbar { background: #1f2937; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.08); }
 .dark .mz-cropper__toolbar .mz-cropper__divider { background: #374151; }
+.dark .mz-cropper__tb-grip { color: #4b5563; }
 .dark .mz-cropper__tb-btn { color: #6b7280; }
 .dark .mz-cropper__tb-btn:hover { background: #374151; color: #f9fafb; }
 .dark .mz-cropper__foot { background: #111827; border-top-color: #374151; }

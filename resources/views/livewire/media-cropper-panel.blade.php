@@ -54,7 +54,21 @@
             </template>
 
             {{-- Floating toolbar --}}
-            <div class="mz-cropper__toolbar">
+            <div
+                class="mz-cropper__toolbar"
+                x-ref="toolbar"
+                x-bind:class="toolbarDragging ? 'mz-cropper__toolbar--dragging' : ''"
+                x-bind:style="toolbarStyle"
+            >
+                {{-- Drag handle --}}
+                <div
+                    class="mz-cropper__tb-grip"
+                    title="Drag to move"
+                    x-on:mousedown="toolbarDragStart($event)"
+                    x-on:touchstart="toolbarDragStart($event)"
+                >
+                    <svg viewBox="0 0 12 18" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="10" cy="2" r="1.5"/><circle cx="2" cy="9" r="1.5"/><circle cx="10" cy="9" r="1.5"/><circle cx="2" cy="16" r="1.5"/><circle cx="10" cy="16" r="1.5"/></svg>
+                </div>
                 {{-- Zoom out --}}
                 <button type="button" class="mz-cropper__tb-btn" title="Zoom out" x-on:click="cropper && cropper.zoom(-0.1)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
