@@ -198,21 +198,40 @@ class MediaCropperPanel extends Component
             $imgW = $image->width();
             $imgH = $image->height();
 
-            // Clamp the requested rectangle so it always fits entirely within
-            // the (post-rotation/flip) image bounds. This defends against both
-            // stale geometry (the source file was replaced at a different
-            // resolution since this crop was last saved) and crafted payloads
-            // (a client sending negative or oversized values directly to this
-            // endpoint), either of which could otherwise request pixels outside
-            // the image or force an unbounded canvas allocation.
+            // Clamp the requested rectangle to a bounded region around the
+            // (post-rotation/flip) image - it may extend past the image edges
+            // (baked as whitespace padding below, e.g. for adding blank space
+            // above a photo), but only by a bounded, size-proportional amount.
+            // This defends against both stale geometry (the source file was
+            // replaced at a different, smaller resolution since this crop was
+            // last saved) and crafted payloads (a client sending extreme
+            // values directly to this endpoint) forcing an unbounded canvas
+            // allocation, while still allowing genuine editorial padding.
             [$cropX, $cropY, $cropW, $cropH] = $this->clampCropRectangle($cropX, $cropY, $cropW, $cropH, $imgW, $imgH);
-
-            $image->crop($cropW, $cropH, $cropX, $cropY);
 
             $geometryX = $cropX;
             $geometryY = $cropY;
             $geometryWidth = $cropW;
             $geometryHeight = $cropH;
+
+            $padLeft = $cropX < 0 ? abs($cropX) : 0;
+            $padTop = $cropY < 0 ? abs($cropY) : 0;
+            $padRight = max(0, ($cropX + $cropW) - $imgW);
+            $padBottom = max(0, ($cropY + $cropH) - $imgH);
+
+            if ($padLeft || $padTop || $padRight || $padBottom) {
+                $paddedWidth = $imgW + $padLeft + $padRight;
+                $paddedHeight = $imgH + $padTop + $padBottom;
+
+                $canvas = Image::canvas($paddedWidth, $paddedHeight, '#ffffff');
+                $canvas->insert($image, 'top-left', $padLeft, $padTop);
+                $image = $canvas;
+
+                $cropX += $padLeft;
+                $cropY += $padTop;
+            }
+
+            $image->crop($cropW, $cropH, $cropX, $cropY);
         }
 
         if ($targetWidth > 0 && $targetHeight > 0) {
@@ -315,11 +334,25 @@ class MediaCropperPanel extends Component
     }
 
     /**
-     * Clamp a requested crop rectangle so it fits entirely within
-     * [0, 0, $boundsWidth, $boundsHeight]. Malformed input (non-positive
-     * width/height, an origin or extent beyond the bounds) is corrected
-     * rather than rejected outright, so a stale or crafted request still
-     * produces a safe, in-bounds crop instead of failing the whole save.
+     * How far a crop rectangle may extend beyond the source image on each
+     * side, as a multiple of that axis's source dimension. Baked as
+     * whitespace padding (e.g. deliberately adding blank space above a
+     * photo) - a real, wanted editorial workflow - so this isn't clamped to
+     * zero. It's bounded to a small, size-proportional multiple rather than
+     * left unbounded, so a stale request (source replaced at a smaller
+     * resolution) or a crafted one (extreme x/y/width/height sent directly
+     * to this endpoint) can't force an arbitrarily large canvas allocation.
+     */
+    private const MAX_PADDING_RATIO = 1.0;
+
+    /**
+     * Clamp a requested crop rectangle to a bounded region around
+     * [0, 0, $boundsWidth, $boundsHeight] - it may extend past the bounds
+     * (see MAX_PADDING_RATIO) but not arbitrarily far. Malformed input
+     * (non-positive width/height, an origin or extent far beyond the
+     * bounds) is corrected rather than rejected outright, so a stale or
+     * crafted request still produces a safe crop instead of failing the
+     * whole save.
      *
      * @return array{0: int, 1: int, 2: int, 3: int} [x, y, width, height]
      */
@@ -328,11 +361,14 @@ class MediaCropperPanel extends Component
         $boundsWidth = max(1, $boundsWidth);
         $boundsHeight = max(1, $boundsHeight);
 
-        $width = max(1, min($width, $boundsWidth));
-        $height = max(1, min($height, $boundsHeight));
+        $padX = (int) round($boundsWidth * self::MAX_PADDING_RATIO);
+        $padY = (int) round($boundsHeight * self::MAX_PADDING_RATIO);
 
-        $x = max(0, min($x, $boundsWidth - $width));
-        $y = max(0, min($y, $boundsHeight - $height));
+        $width = max(1, min($width, $boundsWidth + (2 * $padX)));
+        $height = max(1, min($height, $boundsHeight + (2 * $padY)));
+
+        $x = max(-$padX, min($x, $boundsWidth + $padX - $width));
+        $y = max(-$padY, min($y, $boundsHeight + $padY - $height));
 
         return [$x, $y, $width, $height];
     }

@@ -268,6 +268,30 @@ document.addEventListener('alpine:init', function () {
                 this.cropData = this.cropper.getData(true);
             },
 
+            // Nudges the image within the crop box to open up whitespace on one
+            // side (e.g. "add space above"). When the crop box already covers the
+            // whole visible canvas — the common case for a plain, uncropped photo —
+            // there's no free screen space to drag the crop box itself past the
+            // image edge; the only way to create that space is to move the image
+            // the other way, which cropper.move() does directly via its API rather
+            // than requiring the zoom-out/re-zoom-in workaround this replaces.
+            addSpace: function (direction) {
+                if (!this.cropper) return;
+                this._userHasInteracted = true;
+                var canvas = this.cropper.getCanvasData();
+                var stepX = Math.max(10, canvas.width * 0.1);
+                var stepY = Math.max(10, canvas.height * 0.1);
+                var dx = 0;
+                var dy = 0;
+                if (direction === 'above') dy = stepY;
+                else if (direction === 'below') dy = -stepY;
+                else if (direction === 'left') dx = stepX;
+                else if (direction === 'right') dx = -stepX;
+                this.cropper.move(dx, dy);
+                this.cropData = this.cropper.getData(true);
+                this._cropBoxData = this.cropper.getCropBoxData();
+            },
+
             guideLineStyle: function (guide) {
                 var box = this._cropBoxData;
                 if (!box) return 'display:none';

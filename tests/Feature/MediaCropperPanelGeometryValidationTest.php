@@ -12,12 +12,14 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 /**
- * Server-side defense for saveCrop() against out-of-bounds or malformed crop
- * geometry: a stale payload (source image replaced at a different resolution
- * since a crop's geometry was last computed) or a crafted one (bypassing the
- * Cropper.js UI to call the Livewire endpoint directly) must never be able to
- * request pixels outside the source image or force an unbounded canvas
- * allocation.
+ * Server-side handling of a crop rectangle that extends beyond the source
+ * image: this is a real, wanted editorial workflow (e.g. deliberately adding
+ * blank whitespace above a photo), so it's baked as whitespace padding
+ * rather than rejected - but bounded to a size-proportional maximum so a
+ * stale payload (source image replaced at a different resolution since a
+ * crop's geometry was last computed) or a crafted one (bypassing the
+ * Cropper.js UI to call the Livewire endpoint directly) can't force an
+ * unbounded canvas allocation.
  */
 class MediaCropperPanelGeometryValidationTest extends TestCase
 {
@@ -61,9 +63,18 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
         }
     }
 
-    public function test_crop_rectangle_extending_past_the_image_is_clamped_not_padded(): void
+    private function pixelAt(string $binaryPng, int $x, int $y): array
     {
-        $path = 'uploads/clamp-overflow.png';
+        $image = imagecreatefromstring($binaryPng);
+        $rgb = imagecolorsforindex($image, imagecolorat($image, $x, $y));
+        imagedestroy($image);
+
+        return [$rgb['red'], $rgb['green'], $rgb['blue']];
+    }
+
+    public function test_crop_rectangle_extending_moderately_past_the_image_is_baked_as_whitespace_padding(): void
+    {
+        $path = 'uploads/pad-overflow.png';
         Storage::disk('media')->put($path, $this->makeSolidImage(100, 100));
         $media = $this->makeMedia($path, 100, 100);
 
@@ -72,7 +83,9 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
                 'key' => 'test',
                 'format' => 'png',
                 'quality' => 90,
-                // Requests a box that runs 50px past both the right and bottom edges.
+                // Runs 50px past both the right and bottom edges - within the
+                // allowed padding budget, so it's honored as requested rather
+                // than shifted or truncated.
                 'x' => 70, 'y' => 70, 'width' => 80, 'height' => 80,
                 'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1,
                 'targetWidth' => 0, 'targetHeight' => 0,
@@ -82,24 +95,21 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
         $media->refresh();
         $crop = collect($media->crops)->last();
 
-        // Baked output must be a real, in-bounds crop — never padded with
-        // synthetic whitespace pixels beyond what the source actually has.
-        // The requested 80x80 size fits within the 100x100 source, so it's
-        // preserved and the origin is shifted back into bounds instead
-        // (rather than truncating the rectangle and distorting its aspect
-        // ratio away from what the user configured).
         $this->assertSame(80, $crop['width']);
         $this->assertSame(80, $crop['height']);
-        $this->assertSame(20, $crop['geometry']['x']);
-        $this->assertSame(20, $crop['geometry']['y']);
+        $this->assertSame(70, $crop['geometry']['x']);
+        $this->assertSame(70, $crop['geometry']['y']);
 
-        $this->assertLessThanOrEqual(100, $crop['geometry']['x'] + $crop['geometry']['width']);
-        $this->assertLessThanOrEqual(100, $crop['geometry']['y'] + $crop['geometry']['height']);
+        $bytes = Storage::disk('media')->get($crop['path']);
+        // Top-left of the baked crop (source pixel 70,70) is real image content...
+        $this->assertSame([10, 20, 30], $this->pixelAt($bytes, 2, 2));
+        // ...bottom-right (past the source's 100x100 edge) is whitespace padding.
+        $this->assertSame([255, 255, 255], $this->pixelAt($bytes, 78, 78));
     }
 
-    public function test_negative_origin_is_clamped_into_bounds(): void
+    public function test_negative_origin_is_baked_as_whitespace_padding_above_and_left_of_the_image(): void
     {
-        $path = 'uploads/clamp-negative.png';
+        $path = 'uploads/pad-negative.png';
         Storage::disk('media')->put($path, $this->makeSolidImage(100, 100));
         $media = $this->makeMedia($path, 100, 100);
 
@@ -108,6 +118,8 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
                 'key' => 'test',
                 'format' => 'png',
                 'quality' => 90,
+                // This is the "add whitespace above/left of the image" workflow:
+                // the box starts 40px above and left of the source image.
                 'x' => -40, 'y' => -40, 'width' => 50, 'height' => 50,
                 'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1,
                 'targetWidth' => 0, 'targetHeight' => 0,
@@ -117,15 +129,21 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
         $media->refresh();
         $crop = collect($media->crops)->last();
 
-        $this->assertGreaterThanOrEqual(0, $crop['geometry']['x']);
-        $this->assertGreaterThanOrEqual(0, $crop['geometry']['y']);
+        $this->assertSame(-40, $crop['geometry']['x']);
+        $this->assertSame(-40, $crop['geometry']['y']);
         $this->assertSame(50, $crop['width']);
         $this->assertSame(50, $crop['height']);
+
+        $bytes = Storage::disk('media')->get($crop['path']);
+        // Top-left of the baked crop is whitespace padding (above/left of the source)...
+        $this->assertSame([255, 255, 255], $this->pixelAt($bytes, 2, 2));
+        // ...bottom-right (source pixel 8,8) is real image content.
+        $this->assertSame([10, 20, 30], $this->pixelAt($bytes, 48, 48));
     }
 
-    public function test_grossly_oversized_crafted_rectangle_cannot_force_unbounded_canvas(): void
+    public function test_grossly_oversized_crafted_rectangle_is_bounded_to_a_size_proportional_maximum(): void
     {
-        $path = 'uploads/clamp-attack.png';
+        $path = 'uploads/pad-attack.png';
         Storage::disk('media')->put($path, $this->makeSolidImage(100, 100));
         $media = $this->makeMedia($path, 100, 100);
 
@@ -145,11 +163,13 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
         $crop = collect($media->crops)->last();
 
         $this->assertNotNull($crop);
-        $this->assertLessThanOrEqual(100, $crop['width']);
-        $this->assertLessThanOrEqual(100, $crop['height']);
+        // Bounded to (source dimension) * (1 + 2 * MAX_PADDING_RATIO) = 100 * 3 = 300,
+        // not the attacker-supplied ~1e9.
+        $this->assertLessThanOrEqual(300, $crop['width']);
+        $this->assertLessThanOrEqual(300, $crop['height']);
     }
 
-    public function test_stale_geometry_from_a_replaced_smaller_source_is_clamped_to_new_bounds(): void
+    public function test_stale_geometry_from_a_replaced_smaller_source_is_bounded_to_new_dimensions(): void
     {
         // A crop's geometry was computed against a 200x200 original...
         $path = 'uploads/replaced.png';
@@ -185,9 +205,11 @@ class MediaCropperPanelGeometryValidationTest extends TestCase
         $media->refresh();
         $latestCrop = collect($media->crops)->last();
 
-        $this->assertLessThanOrEqual(80, $latestCrop['width']);
-        $this->assertLessThanOrEqual(80, $latestCrop['height']);
-        $this->assertLessThanOrEqual(80, $latestCrop['geometry']['x'] + $latestCrop['geometry']['width']);
-        $this->assertLessThanOrEqual(80, $latestCrop['geometry']['y'] + $latestCrop['geometry']['height']);
+        // Bounded to the new 80x80 source's padding budget (80 * (1 + 2) = 240),
+        // not left referencing the old 200x200 source's coordinate space.
+        $this->assertLessThanOrEqual(240, $latestCrop['width']);
+        $this->assertLessThanOrEqual(240, $latestCrop['height']);
+        $this->assertLessThanOrEqual(160, $latestCrop['geometry']['x'] + $latestCrop['geometry']['width']);
+        $this->assertLessThanOrEqual(160, $latestCrop['geometry']['y'] + $latestCrop['geometry']['height']);
     }
 }
