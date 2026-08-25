@@ -261,7 +261,21 @@ class MediaCropperPanel extends Component
             Storage::disk($media->disk)->delete($existingCrop['path']);
         }
 
-        $url = Storage::disk($media->disk)->url($path).'?v='.time();
+        // Local-disk crop URLs share the same "/media/{path}" prefix as the
+        // signed Glide route, so an unsigned URL here gets rejected with a
+        // 403 whenever the request reaches Laravel instead of being served
+        // as a static file (e.g. the baked file is momentarily missing).
+        // Cloud disks (e.g. R2) serve from their own domain and never hit
+        // that route, so they keep the plain, cache-busted disk URL — same
+        // split Media::getSignedUrl() already uses for the source image.
+        if (in_array($media->disk, config('media.cloud_disks', []), true)) {
+            $url = Storage::disk($media->disk)->url($path).'?v='.time();
+        } else {
+            $url = MediaGlide::signedUrl($path, ['v' => (string) time()]);
+            if (str_starts_with($url, '/')) {
+                $url = rtrim(config('app.url'), '/').$url;
+            }
+        }
         $size = strlen($encoded->getEncoded());
 
         $cropEntry = [
