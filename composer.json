@@ -16,6 +16,7 @@
         "intervention/image": "^2.7|^3.0",
         "livewire/livewire": "^3.0",
         "league/glide": "^2.0",
+        "league/glide-symfony": "^2.0",
         "spatie/image": "^3.9",
         "spatie/laravel-sluggable": "^3.6",
         "spatie/laravel-package-tools": "^1.16"
