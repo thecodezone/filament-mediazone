@@ -93,7 +93,20 @@ document.addEventListener('alpine:init', function () {
                         // Only auto-fit a fresh, blank crop box — never override a
                         // successfully restored/edited geometry with the default layout.
                         if (!self.editingCropId || !self._initialGeometry || self._geometryUnavailable) {
-                            self.fitCanvasWithMargin();
+                            // selectPreset() may have run before the cropper existed
+                            // (it's called synchronously from init() while the cropper
+                            // is still being created asynchronously in _tryInit()), in
+                            // which case its setAspectRatio()/_fitImageToCropHeight()
+                            // call was a no-op. Re-apply it now that the cropper is
+                            // actually ready so the crop box matches the selected preset.
+                            if (self.preset !== 'custom' && self.targetWidth && self.targetHeight) {
+                                var ratio = self.targetWidth / self.targetHeight;
+                                self.cropper.setAspectRatio(ratio);
+                                self._fitImageToCropHeight(ratio);
+                                self.aspectRatio = '';
+                            } else {
+                                self.fitCanvasWithMargin();
+                            }
                         }
                     },
                     cropstart: function () { self._userHasInteracted = true; },
