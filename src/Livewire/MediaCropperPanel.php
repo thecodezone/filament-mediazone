@@ -249,7 +249,15 @@ class MediaCropperPanel extends Component
 
         $cropId = $existingCrop['id'] ?? (string) Str::uuid();
         $ext = $format;
-        $directory = rtrim(dirname($media->path), '/').'/crops';
+        // dirname() returns "." for a root-level path (no directory
+        // component), which would otherwise get baked into $directory as a
+        // literal "./" prefix. League\Glide\Urls\UrlBuilder only trims
+        // leading/trailing slashes when signing, so that "./" survives into
+        // the signed hash — but browsers normalize "./" out of the request
+        // URL before sending it, so the signature the server recomputes
+        // never matches and the file 403s no matter how it's re-signed.
+        $sourceDirectory = dirname($media->path);
+        $directory = ($sourceDirectory === '.' ? '' : rtrim($sourceDirectory, '/').'/').'crops';
         $path = $directory.'/'.$cropId.'.'.$ext;
 
         $encoded = $image->encode($ext, $quality);

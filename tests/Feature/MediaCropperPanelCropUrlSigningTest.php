@@ -147,4 +147,55 @@ class MediaCropperPanelCropUrlSigningTest extends TestCase
             ['v' => '123']
         );
     }
+
+    /**
+     * A media file stored at the disk root (no directory component) makes
+     * dirname($media->path) return ".". If that were concatenated straight
+     * into the crop directory, the baked crop's path would carry a literal
+     * "./" prefix. League\Glide\Urls\UrlBuilder only trims leading/trailing
+     * slashes when signing, so that "./" would survive into the signature —
+     * but browsers normalize "./" out of the request URL before sending it,
+     * so the server would recompute a different signature than the one
+     * embedded in the link and reject every request for the file.
+     */
+    public function test_crop_of_a_root_level_media_file_has_no_dot_slash_prefix_and_validates(): void
+    {
+        $sourcePath = 'root-source.png';
+        Storage::disk('media')->put($sourcePath, $this->makeImage());
+        $media = $this->makeSourceMedia($sourcePath, 'media');
+
+        Livewire::test(MediaCropperPanel::class, ['media' => $media->id])
+            ->call('saveCrop', [
+                'key' => 'test',
+                'format' => 'png',
+                'quality' => 90,
+                'x' => 0, 'y' => 0, 'width' => 10, 'height' => 10,
+                'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1,
+                'targetWidth' => 0, 'targetHeight' => 0,
+                'breakpoints' => ['desktop'],
+            ]);
+
+        $media->refresh();
+        $crop = collect($media->crops)->last();
+
+        $this->assertStringStartsNotWith('./', $crop['path']);
+        $this->assertSame('crops/'.$crop['id'].'.png', $crop['path']);
+
+        // Simulate what actually reaches the server: the browser has
+        // already stripped any "./" from the request path before this
+        // validation ever runs.
+        $query = $this->queryOf($crop['url']);
+        SignatureFactory::create(config('app.key'))->validateRequest(
+            '/media/'.$crop['path'],
+            $query
+        );
+        $this->addToAssertionCount(1); // validateRequest() throws on failure.
+    }
+
+    private function queryOf(string $url): array
+    {
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+
+        return $query;
+    }
 }

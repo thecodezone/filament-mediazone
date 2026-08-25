@@ -29,7 +29,8 @@ class MediaObserver
             $disk = Storage::disk($model->disk);
             $disk->delete($model->path);
 
-            $cropsDir = dirname($model->path).'/crops';
+            $sourceDirectory = dirname($model->path);
+            $cropsDir = ($sourceDirectory === '.' ? '' : rtrim($sourceDirectory, '/').'/').'crops';
             if ($disk->exists($cropsDir)) {
                 $disk->deleteDirectory($cropsDir);
             }
