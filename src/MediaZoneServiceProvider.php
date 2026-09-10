@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codezone\MediaZone;
 
+use Codezone\MediaZone\Console\Commands\RegenerateMissingCrops;
 use Codezone\MediaZone\Models\Media;
 use Codezone\MediaZone\Observers\MediaObserver;
 use Spatie\LaravelPackageTools\Package;
@@ -20,7 +21,8 @@ class MediaZoneServiceProvider extends PackageServiceProvider
             ->hasMigrations([
                 'create_media_table',
             ])
-            ->hasRoutes(['web']);
+            ->hasRoutes(['web'])
+            ->hasCommand(RegenerateMissingCrops::class);
     }
 
     public function packageBooted(): void

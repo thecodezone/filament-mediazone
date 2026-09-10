@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codezone\MediaZone\Livewire;
 
 use Codezone\MediaZone\Media\CropPreset;
+use Codezone\MediaZone\Media\CropRenderer;
 use Codezone\MediaZone\Media\MediaLocation;
 use Codezone\MediaZone\Models\Media;
 use Codezone\MediaZone\Services\MediaGlide;
@@ -167,85 +168,62 @@ class MediaCropperPanel extends Component
             return;
         }
 
-        $image = Image::make($fileContents);
-        $image->orientate();
+        // Probe the post-orientate/flip/rotate dimensions so the requested
+        // rectangle can be clamped against the space it'll actually be cut
+        // from. The real crop/resize/encode pipeline is delegated to
+        // CropRenderer so it can be replayed later from stored geometry
+        // alone (e.g. to regenerate a crop file that went missing from disk
+        // without losing the original edit) without duplicating this logic.
+        $probe = Image::make($fileContents);
+        $probe->orientate();
 
         // Natural dimensions of the source file at the time of this crop, used
         // later to detect whether the source has since been replaced at a
         // different resolution (see Media::getCrop() consumers).
-        $sourceWidth = $image->width();
-        $sourceHeight = $image->height();
+        $sourceWidth = $probe->width();
+        $sourceHeight = $probe->height();
 
         if ($scaleX < 0) {
-            $image->flip('h');
+            $probe->flip('h');
         }
         if ($scaleY < 0) {
-            $image->flip('v');
+            $probe->flip('v');
         }
-
         if ($rotate !== 0.0) {
-            $image->rotate(-$rotate, '#ffffff');
+            $probe->rotate(-$rotate, '#ffffff');
         }
 
         // Geometry captured for persistence, defaulting to "no crop applied"
         // (the full, post-transform image) when the request didn't specify one.
         $geometryX = 0;
         $geometryY = 0;
-        $geometryWidth = $image->width();
-        $geometryHeight = $image->height();
+        $geometryWidth = $probe->width();
+        $geometryHeight = $probe->height();
 
         if ($cropW > 0 && $cropH > 0) {
-            $imgW = $image->width();
-            $imgH = $image->height();
-
             // Clamp the requested rectangle to a bounded region around the
             // (post-rotation/flip) image - it may extend past the image edges
-            // (baked as whitespace padding below, e.g. for adding blank space
+            // (baked as whitespace padding, e.g. for adding blank space
             // above a photo), but only by a bounded, size-proportional amount.
             // This defends against both stale geometry (the source file was
             // replaced at a different, smaller resolution since this crop was
             // last saved) and crafted payloads (a client sending extreme
             // values directly to this endpoint) forcing an unbounded canvas
             // allocation, while still allowing genuine editorial padding.
-            [$cropX, $cropY, $cropW, $cropH] = $this->clampCropRectangle($cropX, $cropY, $cropW, $cropH, $imgW, $imgH);
-
-            $geometryX = $cropX;
-            $geometryY = $cropY;
-            $geometryWidth = $cropW;
-            $geometryHeight = $cropH;
-
-            $padLeft = $cropX < 0 ? abs($cropX) : 0;
-            $padTop = $cropY < 0 ? abs($cropY) : 0;
-            $padRight = max(0, ($cropX + $cropW) - $imgW);
-            $padBottom = max(0, ($cropY + $cropH) - $imgH);
-
-            if ($padLeft || $padTop || $padRight || $padBottom) {
-                $paddedWidth = $imgW + $padLeft + $padRight;
-                $paddedHeight = $imgH + $padTop + $padBottom;
-
-                $canvas = Image::canvas($paddedWidth, $paddedHeight, '#ffffff');
-                $canvas->insert($image, 'top-left', $padLeft, $padTop);
-                $image = $canvas;
-
-                $cropX += $padLeft;
-                $cropY += $padTop;
-            }
-
-            $image->crop($cropW, $cropH, $cropX, $cropY);
+            [$geometryX, $geometryY, $geometryWidth, $geometryHeight] = $this->clampCropRectangle(
+                $cropX, $cropY, $cropW, $cropH, $probe->width(), $probe->height()
+            );
         }
 
-        if ($targetWidth > 0 && $targetHeight > 0) {
-            $image->fit($targetWidth, $targetHeight);
-            $image->resizeCanvas($targetWidth, $targetHeight, 'center', false, '#ffffff');
-        } elseif ($targetWidth > 0) {
-            $image->resize($targetWidth, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-        } elseif ($targetHeight > 0) {
-            $image->resize(null, $targetHeight, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-        }
+        $rendered = (new CropRenderer)->render($fileContents, [
+            'x' => $geometryX,
+            'y' => $geometryY,
+            'width' => $geometryWidth,
+            'height' => $geometryHeight,
+            'rotate' => $rotate,
+            'scaleX' => $scaleX,
+            'scaleY' => $scaleY,
+        ], $format, $quality, $targetWidth, $targetHeight);
 
         $cropId = $existingCrop['id'] ?? (string) Str::uuid();
         $ext = $format;
@@ -260,8 +238,7 @@ class MediaCropperPanel extends Component
         $directory = ($sourceDirectory === '.' ? '' : rtrim($sourceDirectory, '/').'/').'crops';
         $path = $directory.'/'.$cropId.'.'.$ext;
 
-        $encoded = $image->encode($ext, $quality);
-        Storage::disk($media->disk)->put($path, $encoded->getEncoded());
+        Storage::disk($media->disk)->put($path, $rendered['bytes']);
 
         // Clean up the previous baked output if this edit changed its
         // extension (a format change), so it doesn't linger as an orphan.
@@ -284,7 +261,7 @@ class MediaCropperPanel extends Component
                 $url = rtrim(config('app.url'), '/').$url;
             }
         }
-        $size = strlen($encoded->getEncoded());
+        $size = strlen($rendered['bytes']);
 
         $cropEntry = [
             'id' => $cropId,
@@ -305,8 +282,8 @@ class MediaCropperPanel extends Component
             'name' => $key,
             'path' => $path,
             'url' => $url,
-            'width' => $image->width(),
-            'height' => $image->height(),
+            'width' => $rendered['width'],
+            'height' => $rendered['height'],
             'size' => $size,
             'type' => 'image/'.$ext,
             'ext' => $ext,
