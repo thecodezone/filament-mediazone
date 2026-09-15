@@ -148,7 +148,18 @@ class MediaCropperPanel extends Component
 
         $location = $data['location'] ?? null;
         $breakpoints = $data['breakpoints'] ?? ['mobile', 'tablet', 'desktop'];
-        $key = trim($data['key'] ?? '') ?: ($location ?? 'custom');
+        // A location-less save with no explicit key has no real "slot" identity
+        // to share with any other media, so the fallback is suffixed with this
+        // media's own id rather than a shared literal - otherwise two unrelated
+        // Media records would collide on the same implicit key.
+        //
+        // Re-editing an existing crop keeps whatever key it was stored with, for
+        // the same reason its id is reused above: consumers reference a crop by
+        // its key (a location's stored crop_key, Media::getCrop()), so minting a
+        // new one here would silently break those references for any crop saved
+        // before the id suffix existed.
+        $key = trim($data['key'] ?? '')
+            ?: ($existingCrop['key'] ?? ($location ?? ('custom-'.$media->id)));
         $label = $data['label'] ?? $key;
         $format = $data['format'] ?? 'webp';
         $quality = max(1, min(100, (int) ($data['quality'] ?? 90)));
@@ -335,7 +346,17 @@ class MediaCropperPanel extends Component
             }
 
             if (($existing['key'] ?? ($existing['crop']['key'] ?? null)) === $key) {
-                $existing['breakpoints'] = array_values(array_diff($existing['breakpoints'] ?? [], $breakpoints));
+                $current = $existing['breakpoints'] ?? [];
+                $remaining = array_values(array_diff($current, $breakpoints));
+                if (count($remaining) !== count($current)) {
+                    // Same first-strike rule as Media::removeBreakpointsFromSiblings():
+                    // preserve what this crop was serving before it was stripped,
+                    // without letting a later strip overwrite the original list.
+                    if (! array_key_exists('previous_breakpoints', $existing)) {
+                        $existing['previous_breakpoints'] = array_values($current);
+                    }
+                    $existing['breakpoints'] = $remaining;
+                }
             }
 
             return $existing;
@@ -350,7 +371,7 @@ class MediaCropperPanel extends Component
         $media->saveQuietly();
         $media->timestamps = true;
 
-        $media->removeBreakpointsFromSiblings($key, $breakpoints);
+        $media->removeBreakpointsFromSiblings($location, $key, $breakpoints);
 
         $this->dispatch('add-crop', statePath: $this->statePath, mediaId: $media->id, cropId: $cropId, crop: $cropEntry);
     }

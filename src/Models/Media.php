@@ -53,12 +53,19 @@ class Media extends Model
     }
 
     /**
-     * Remove the given breakpoints from all sibling media crops with the same key
-     * in the same directory. Does not bump updated_at.
+     * Remove the given breakpoints from sibling media crops that share the same
+     * picker location and crop key in the same directory. Does not bump updated_at.
+     *
+     * $location identifies the logical "slot" (e.g. a MediaPicker field's
+     * location key) a crop belongs to. A shared directory alone doesn't mean
+     * two Media records represent the same slot - a directory can hold crops
+     * for many unrelated records - so a null/empty location (an implicit,
+     * non-unique key such as the cropper's "custom" fallback) is never
+     * treated as a shared slot and no siblings are touched.
      */
-    public function removeBreakpointsFromSiblings(string $cropKey, array $breakpoints): void
+    public function removeBreakpointsFromSiblings(?string $location, string $cropKey, array $breakpoints): void
     {
-        if (empty($breakpoints)) {
+        if (empty($breakpoints) || ! $location) {
             return;
         }
 
@@ -66,17 +73,28 @@ class Media extends Model
             ->where('id', '!=', $this->id)
             ->where('directory', $this->directory)
             ->whereNotNull('crops')
-            ->each(function (self $sibling) use ($cropKey, $breakpoints) {
+            ->each(function (self $sibling) use ($location, $cropKey, $breakpoints) {
                 $changed = false;
-                $updatedCrops = array_map(function ($crop) use ($cropKey, $breakpoints, &$changed) {
-                    if (($crop['key'] ?? null) !== $cropKey) {
+                $updatedCrops = array_map(function ($crop) use ($location, $cropKey, $breakpoints, &$changed) {
+                    if (($crop['location'] ?? null) !== $location || ($crop['key'] ?? null) !== $cropKey) {
                         return $crop;
                     }
-                    $remaining = array_values(array_diff($crop['breakpoints'] ?? [], $breakpoints));
-                    if (count($remaining) !== count($crop['breakpoints'] ?? [])) {
-                        $crop['breakpoints'] = $remaining;
-                        $changed = true;
+                    $current = $crop['breakpoints'] ?? [];
+                    $remaining = array_values(array_diff($current, $breakpoints));
+                    if (count($remaining) === count($current)) {
+                        return $crop;
                     }
+
+                    // Record what this crop was serving before the first strike,
+                    // so an emptied crop stays recoverable. Only the first strike
+                    // writes it: a crop stripped twice would otherwise have its
+                    // original assignment overwritten by an already-reduced list.
+                    if (! array_key_exists('previous_breakpoints', $crop)) {
+                        $crop['previous_breakpoints'] = array_values($current);
+                    }
+
+                    $crop['breakpoints'] = $remaining;
+                    $changed = true;
 
                     return $crop;
                 }, $sibling->crops);
