@@ -66,7 +66,9 @@ class EditMedia extends EditRecord
         $crop = collect($record->crops ?? [])->first(fn ($c) => ($c['id'] ?? null) === $id);
 
         if ($crop && ! empty($crop['path'])) {
-            Storage::disk($record->disk)->delete($crop['path']);
+            // Delete from the disk the crop was actually baked to; a crop can
+            // live on a different disk than its source (see MediaObserver).
+            Storage::disk($crop['disk'] ?? $record->disk)->delete($crop['path']);
         }
 
         $record->crops = array_values(
