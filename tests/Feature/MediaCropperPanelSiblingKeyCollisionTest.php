@@ -187,4 +187,43 @@ class MediaCropperPanelSiblingKeyCollisionTest extends TestCase
         $this->assertSame([], array_values($mediaA->crops[0]['breakpoints']));
         $this->assertSame(['mobile', 'tablet', 'desktop'], array_values($mediaB->crops[0]['breakpoints']));
     }
+
+    public function test_re_editing_a_crop_saved_before_the_id_suffix_keeps_its_original_key(): void
+    {
+        $path = 'uploads/legacy.png';
+        Storage::disk('media')->put($path, $this->makeSolidImage(10, 20, 30));
+        $media = $this->makeMedia($path);
+
+        // A crop stored before the implicit key gained its media-id suffix.
+        $media->crops = [[
+            'id' => 'legacy-crop-id',
+            'key' => 'custom',
+            'crop' => ['key' => 'custom', 'label' => 'custom'],
+            'breakpoints' => ['mobile', 'tablet', 'desktop'],
+            'path' => 'uploads/crops/legacy-crop-id.png',
+            'url' => 'https://example.com/legacy.png',
+            'updated_at' => '2020-01-01T00:00:00Z',
+        ]];
+        $media->timestamps = false;
+        $media->saveQuietly();
+        $media->timestamps = true;
+
+        // Re-editing that crop must not mint a new key - a host record's stored
+        // crop_key (and Media::getCrop()) still references the original.
+        Livewire::test(MediaCropperPanel::class, ['media' => $media->id])
+            ->call('saveCrop', [
+                'id' => 'legacy-crop-id',
+                'format' => 'png', 'quality' => 90,
+                'x' => 0, 'y' => 0, 'width' => 50, 'height' => 50,
+                'rotate' => 0, 'scaleX' => 1, 'scaleY' => 1,
+                'targetWidth' => 0, 'targetHeight' => 0,
+                'breakpoints' => ['mobile', 'tablet', 'desktop'],
+            ]);
+
+        $media->refresh();
+
+        $this->assertCount(1, $media->crops);
+        $this->assertSame('custom', $media->crops[0]['key'], 'Re-editing an existing crop must preserve its stored key.');
+        $this->assertNotNull($media->getCrop('custom'), 'A consumer referencing the original key must still resolve.');
+    }
 }
