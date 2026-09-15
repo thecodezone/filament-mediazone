@@ -79,11 +79,22 @@ class Media extends Model
                     if (($crop['location'] ?? null) !== $location || ($crop['key'] ?? null) !== $cropKey) {
                         return $crop;
                     }
-                    $remaining = array_values(array_diff($crop['breakpoints'] ?? [], $breakpoints));
-                    if (count($remaining) !== count($crop['breakpoints'] ?? [])) {
-                        $crop['breakpoints'] = $remaining;
-                        $changed = true;
+                    $current = $crop['breakpoints'] ?? [];
+                    $remaining = array_values(array_diff($current, $breakpoints));
+                    if (count($remaining) === count($current)) {
+                        return $crop;
                     }
+
+                    // Record what this crop was serving before the first strike,
+                    // so an emptied crop stays recoverable. Only the first strike
+                    // writes it: a crop stripped twice would otherwise have its
+                    // original assignment overwritten by an already-reduced list.
+                    if (! array_key_exists('previous_breakpoints', $crop)) {
+                        $crop['previous_breakpoints'] = array_values($current);
+                    }
+
+                    $crop['breakpoints'] = $remaining;
+                    $changed = true;
 
                     return $crop;
                 }, $sibling->crops);

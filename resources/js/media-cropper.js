@@ -41,9 +41,15 @@ document.addEventListener('alpine:init', function () {
                     this.cropKey = config.initialKey || '';
                     this.label = config.initialLabel || config.initialKey || '';
                     this.location = config.initialLocation || '';
+                    // An empty stored list is a gap, not a deliberate choice:
+                    // a crop serving no breakpoints is unreachable, and nothing
+                    // else restores it, so editing one would re-save the empty
+                    // list and make the emptied state permanent. Fall back to
+                    // the all-three default when the list is empty as well as
+                    // when it is absent.
                     this.breakpoints = config.initialBreakpoints && config.initialBreakpoints.length
                         ? config.initialBreakpoints.slice()
-                        : [];
+                        : ['mobile', 'tablet', 'desktop'];
                     this.format = config.initialFormat || this.format;
                     this.quality = config.initialQuality || this.quality;
                     this.targetWidth = config.initialTargetWidth || 0;
