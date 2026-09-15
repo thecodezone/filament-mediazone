@@ -570,11 +570,13 @@ class MediaPicker extends Field
                     }
                     $crops = $media->crops ?? [];
                     $touched = false;
+                    $touchedLocation = null;
                     $selectedBreakpoints = [];
                     foreach ($crops as &$crop) {
                         if (($crop['key'] ?? null) === $cropKey) {
                             $crop['updated_at'] = now()->toISOString();
                             $selectedBreakpoints = array_merge($selectedBreakpoints, $crop['breakpoints'] ?? []);
+                            $touchedLocation = $crop['location'] ?? $touchedLocation;
                             $touched = true;
                         }
                     }
@@ -587,7 +589,7 @@ class MediaPicker extends Field
                     }
 
                     if (! empty($selectedBreakpoints)) {
-                        $media->removeBreakpointsFromSiblings($cropKey, array_unique($selectedBreakpoints));
+                        $media->removeBreakpointsFromSiblings($touchedLocation, $cropKey, array_unique($selectedBreakpoints));
                     }
                 }),
 

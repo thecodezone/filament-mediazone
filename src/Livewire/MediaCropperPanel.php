@@ -148,7 +148,11 @@ class MediaCropperPanel extends Component
 
         $location = $data['location'] ?? null;
         $breakpoints = $data['breakpoints'] ?? ['mobile', 'tablet', 'desktop'];
-        $key = trim($data['key'] ?? '') ?: ($location ?? 'custom');
+        // A location-less save with no explicit key has no real "slot" identity
+        // to share with any other media, so the fallback is suffixed with this
+        // media's own id rather than a shared literal - otherwise two unrelated
+        // Media records would collide on the same implicit key.
+        $key = trim($data['key'] ?? '') ?: ($location ?? ('custom-'.$media->id));
         $label = $data['label'] ?? $key;
         $format = $data['format'] ?? 'webp';
         $quality = max(1, min(100, (int) ($data['quality'] ?? 90)));
@@ -350,7 +354,7 @@ class MediaCropperPanel extends Component
         $media->saveQuietly();
         $media->timestamps = true;
 
-        $media->removeBreakpointsFromSiblings($key, $breakpoints);
+        $media->removeBreakpointsFromSiblings($location, $key, $breakpoints);
 
         $this->dispatch('add-crop', statePath: $this->statePath, mediaId: $media->id, cropId: $cropId, crop: $cropEntry);
     }
