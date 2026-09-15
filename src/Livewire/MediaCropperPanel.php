@@ -265,8 +265,10 @@ class MediaCropperPanel extends Component
 
         // Clean up the previous baked output if this edit changed its
         // extension (a format change), so it doesn't linger as an orphan.
+        // The old file is deleted from the disk it was actually written to,
+        // which is not necessarily the source's current disk.
         if ($existingCrop && ! empty($existingCrop['path']) && $existingCrop['path'] !== $path) {
-            Storage::disk($media->disk)->delete($existingCrop['path']);
+            Storage::disk($existingCrop['disk'] ?? $media->disk)->delete($existingCrop['path']);
         }
 
         // Local-disk crop URLs share the same "/media/{path}" prefix as the
@@ -404,7 +406,11 @@ class MediaCropperPanel extends Component
 
         $crop = collect($media->crops ?? [])->first(fn ($c) => ($c['id'] ?? null) === $id);
         if ($crop && ! empty($crop['path'])) {
-            Storage::disk($media->disk)->delete($crop['path']);
+            // Each crop records the disk it was baked to - crops can live on a
+            // different disk than their source (e.g. a cloud disk), so deleting
+            // via the source's disk would orphan the real file and, worse, hit
+            // whatever happens to sit at that path on the source's disk.
+            Storage::disk($crop['disk'] ?? $media->disk)->delete($crop['path']);
         }
 
         $media->crops = array_values(
