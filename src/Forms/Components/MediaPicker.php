@@ -756,9 +756,14 @@ class MediaPicker extends Field
                 $entries = array_values($state);
                 $ids = array_column($entries, 'id');
                 $cropKeys = array_column($entries, 'crop_key', 'id');
-                $mediaItems = $model::findMany(array_map('intval', $ids));
+                $mediaItems = $model::findMany(array_map('intval', $ids))->keyBy('id');
                 $items = [];
-                foreach ($mediaItems as $media) {
+                // findMany() returns primary-key order; keep the saved order.
+                foreach ($ids as $id) {
+                    $media = $mediaItems->get((int) $id);
+                    if (! $media) {
+                        continue;
+                    }
                     $arr = $media->toMediaArray();
                     if (! empty($cropKeys[$media->id])) {
                         $arr['crop_key'] = $cropKeys[$media->id];
@@ -770,9 +775,14 @@ class MediaPicker extends Field
             }
 
             if (is_int($firstValue) || (is_string($firstValue) && ctype_digit((string) $firstValue))) {
-                $mediaItems = $model::findMany(array_map('intval', array_values($state)));
+                $ids = array_map('intval', array_values($state));
+                $mediaItems = $model::findMany($ids)->keyBy('id');
                 $items = [];
-                foreach ($mediaItems as $media) {
+                foreach ($ids as $id) {
+                    $media = $mediaItems->get($id);
+                    if (! $media) {
+                        continue;
+                    }
                     $items[(string) $media->id] = $media->toMediaArray();
                 }
 
