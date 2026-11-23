@@ -17,6 +17,10 @@ Route::get('/media-proxy/{id}', function (int $id) {
     $media = $model::findOrFail($id);
     $stream = Storage::disk($media->disk)->readStream($media->path);
 
+    if ($stream === null) {
+        abort(404);
+    }
+
     return response()->stream(
         function () use ($stream) {
             fpassthru($stream);
@@ -34,6 +38,10 @@ Route::get('/media-download/{id}', function (int $id) {
     $model = config('media.model', Media::class);
     $media = $model::findOrFail($id);
     $stream = Storage::disk($media->disk)->readStream($media->path);
+
+    if ($stream === null) {
+        abort(404);
+    }
 
     return response()->stream(
         function () use ($stream) {
